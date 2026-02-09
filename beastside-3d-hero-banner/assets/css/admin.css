@@ -1,0 +1,180 @@
+.bs3d-admin-wrap .bs3d-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin: 16px 0 24px;
+}
+
+.bs3d-status-card {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.bs3d-status-card h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.bs3d-status-card p {
+  margin: 0;
+  color: #2c3338;
+}
+
+.bs3d-status-ok {
+  border-left-color: #1f9a48;
+}
+
+.bs3d-status-warn {
+  border-left-color: #dba617;
+}
+
+.bs3d-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+
+.bs3d-filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.bs3d-filter-form input,
+.bs3d-filter-form select {
+  min-width: 140px;
+}
+
+.bs3d-log-table code {
+  display: inline-block;
+  max-width: 380px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bs3d-level {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.bs3d-level-info {
+  background: #e8f4ff;
+  color: #06518a;
+}
+
+.bs3d-level-warn {
+  background: #fff6de;
+  color: #8a6607;
+}
+
+.bs3d-level-error {
+  background: #ffe9e9;
+  color: #9b111e;
+}
+
+.bs3d-composer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr);
+  gap: 18px;
+}
+
+.bs3d-composer-main {
+  display: grid;
+  gap: 12px;
+}
+
+.bs3d-model-card {
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.bs3d-model-card h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.bs3d-three-col {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bs3d-three-col label,
+.bs3d-slider-row label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.bs3d-three-col input[type="number"],
+.bs3d-slider-row input[type="number"] {
+  width: 100%;
+}
+
+.bs3d-checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.bs3d-url-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.bs3d-slider-row {
+  display: grid;
+  grid-template-columns: 170px minmax(120px, 1fr) 90px;
+  align-items: center;
+  gap: 10px;
+}
+
+.bs3d-slider-row input[type="range"] {
+  width: 100%;
+}
+
+.bs3d-composer-preview {
+  position: sticky;
+  top: 28px;
+  align-self: start;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.bs3d-admin-preview-banner {
+  min-height: 280px;
+}
+
+@media (max-width: 1200px) {
+  .bs3d-composer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bs3d-composer-preview {
+    position: static;
+  }
+}
+
+@media (max-width: 780px) {
+  .bs3d-three-col {
+    grid-template-columns: 1fr;
+  }
+
+  .bs3d-slider-row {
+    grid-template-columns: 1fr;
+  }
+}

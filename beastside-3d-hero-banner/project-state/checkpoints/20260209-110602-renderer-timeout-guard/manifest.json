@@ -1,0 +1,24 @@
+﻿{
+    "checkpoint_id":  "20260209-110602-renderer-timeout-guard",
+    "created_utc":  "2026-02-09T11:06:02Z",
+    "change_slug":  "renderer-timeout-guard",
+    "scope":  "incremental-change",
+    "summary":  "Hardened renderer fallback path so timeout/error state blocks late async model completion from restarting render flow or emitting false success.",
+    "files_snapshot_root":  "beastside-3d-hero-banner",
+    "artifact_sha256":  "5e0b8676a9c7e69f18994aa4368f9a237df983b702b175e9da5b11e9e1084f30",
+    "feature_ids":  [
+                        "BS3D-F028"
+                    ],
+    "validation":  {
+                       "syntax":  [
+                                      "node --check assets/js/frontend.js: pass"
+                                  ],
+                       "manual_checks":  [
+                                             "Verified renderLoop exits when fallbackActive is true.",
+                                             "Verified model-load promise resolution/catch handlers no-op when fallback has already activated."
+                                         ],
+                       "known_gaps":  [
+                                          "Live timeout scenario should still be validated in browser with delayed/failed asset endpoints."
+                                      ]
+                   }
+}

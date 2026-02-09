@@ -1,0 +1,25 @@
+﻿{
+    "checkpoint_id":  "20260209-110020-admin-composer-v1",
+    "created_utc":  "2026-02-09T11:00:20Z",
+    "change_slug":  "admin-composer-v1",
+    "scope":  "incremental-change",
+    "summary":  "Delivered structured admin composer controls with synchronized sliders/inputs, media selection buttons, and real-time admin preview rendering from draft values.",
+    "files_snapshot_root":  "beastside-3d-hero-banner",
+    "artifact_sha256":  "84ba90c38c19013ccba72332cd0e2a840317bf00c75cc6a947757488218289d6",
+    "feature_ids":  [
+                        "BS3D-F024"
+                    ],
+    "validation":  {
+                       "syntax":  [
+                                      "node --check assets/js/admin-composer.js: pass"
+                                  ],
+                       "manual_checks":  [
+                                             "Verified metabox now uses structured controls and hides diorama-only options when not selected.",
+                                             "Verified admin preview payload refreshes from draft fields without requiring save.",
+                                             "Verified save path uses structured POST fields as canonical persisted source."
+                                         ],
+                       "known_gaps":  [
+                                          "Full UX validation in live WP admin still required for media modal and preview responsiveness across browsers"
+                                      ]
+                   }
+}

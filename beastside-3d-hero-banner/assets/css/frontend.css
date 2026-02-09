@@ -1,0 +1,62 @@
+.bs3d-banner {
+  position: relative;
+  min-height: 340px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: radial-gradient(circle at 25% 15%, #1a2438 0%, #11161f 58%, #0b0f15 100%);
+}
+
+.bs3d-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.bs3d-stage canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.bs3d-banner.bs3d-initializing .bs3d-stage::after {
+  content: "Initializing 3D banner...";
+  position: absolute;
+  inset: auto 0 18px 0;
+  color: #b9c6dc;
+  text-align: center;
+  font: 600 12px/1.4 "Segoe UI", Tahoma, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.bs3d-poster {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bs3d-fallback-active .bs3d-poster {
+  display: block;
+}
+
+.bs3d-loaded .bs3d-poster {
+  display: none;
+}
+
+.bs3d-debug-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  margin: 0;
+  padding: 8px 10px;
+  max-width: min(92%, 360px);
+  color: #00e36d;
+  background: rgba(8, 12, 9, 0.72);
+  border: 1px solid rgba(0, 227, 109, 0.5);
+  border-radius: 6px;
+  font: 12px/1.35 "Courier New", Courier, monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+  z-index: 20;
+}
