@@ -1,26 +1,3 @@
 ﻿{
-    "checkpoint_id":  "20260209-110021-template-versioning",
-    "created_utc":  "2026-02-09T11:00:21Z",
-    "change_slug":  "template-versioning",
-    "scope":  "incremental-change",
-    "summary":  "Integrated template save/apply workflows, banner version snapshots with restore action, and duplicate banner operation in admin flows.",
-    "files_snapshot_root":  "beastside-3d-hero-banner",
-    "artifact_sha256":  "59a3a2d23af07ace5445c0c53eca9dab52a2bb5f809ee1aa44bb43209ddecfdd",
-    "feature_ids":  [
-                        "BS3D-F025",
-                        "BS3D-F026"
-                    ],
-    "validation":  {
-                       "syntax":  [
-                                      "Template/version manager PHP class wiring inspection: pass"
-                                  ],
-                       "manual_checks":  [
-                                             "Verified template post type registration and payload helpers are wired.",
-                                             "Verified version snapshots are created on save and restorable from editor control.",
-                                             "Verified duplicate action copies core banner metadata and opens duplicate record."
-                                         ],
-                       "known_gaps":  [
-                                          "End-to-end admin interaction validation required for template/version UX in live WordPress"
-                                      ]
-                   }
+  "deprecated": "Docs-only checkpoint mode active. See diff-summary.md and restore.md."
 }

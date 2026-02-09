@@ -1,27 +1,3 @@
 ﻿{
-    "checkpoint_id":  "20260209-111549-qa-and-release-docs",
-    "created_utc":  "2026-02-09T11:15:49Z",
-    "change_slug":  "qa-and-release-docs",
-    "scope":  "incremental-change",
-    "summary":  "Added formal QA execution report and release checklist artifacts for v0.2.0 after GitHub push.",
-    "files_snapshot_root":  "beastside-3d-hero-banner",
-    "artifact_sha256":  "3132a31041f16b2fa22479184e24a27ee7ba4e59ee4b7d47b32f4c929f373a0b",
-    "feature_ids":  [
-                        "BS3D-F029",
-                        "BS3D-F030"
-                    ],
-    "validation":  {
-                       "syntax":  [
-                                      "node --check beastside-3d-hero-banner/assets/js/frontend.js: pass",
-                                      "node --check beastside-3d-hero-banner/assets/js/admin-composer.js: pass"
-                                  ],
-                       "manual_checks":  [
-                                             "Vendor runtime asset presence checks passed.",
-                                             "Latest checkpoint hash integrity check passed.",
-                                             "Live WordPress manual matrix documented for execution in active environment."
-                                         ],
-                       "known_gaps":  [
-                                          "Manual WordPress runtime scenarios remain pending until executed in target WP environment."
-                                      ]
-                   }
+  "deprecated": "Docs-only checkpoint mode active. See diff-summary.md and restore.md."
 }

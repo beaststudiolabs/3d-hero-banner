@@ -2,6 +2,11 @@
 
 This log is chronological and append-only. One entry is required per checkpoint.
 
+Checkpoint storage policy note (effective 2026-02-09):
+- Checkpoints are markdown-only (`diff-summary.md`, `restore.md`).
+- Historical `source.zip` artifacts were pruned to reduce workspace bloat.
+- Historical `manifest.json` files are retained only as lightweight deprecated stubs where filesystem ACL prevents deletion.
+
 ## Entry Template
 - `checkpoint_id`:
 - `date_utc`:
@@ -24,8 +29,6 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-101640-baseline-full-chat/source.zip`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-101640-baseline-full-chat/manifest.json`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-101640-baseline-full-chat/diff-summary.md`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-101640-baseline-full-chat/restore.md`
 - `risks`:
@@ -59,8 +62,6 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-103356-vendor-assets-preload/source.zip`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-103356-vendor-assets-preload/manifest.json`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-103356-vendor-assets-preload/diff-summary.md`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-103356-vendor-assets-preload/restore.md`
 - `risks`:
@@ -84,8 +85,6 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
 - `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110018-wp-smoke-validation/source.zip`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110018-wp-smoke-validation/manifest.json`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110018-wp-smoke-validation/diff-summary.md`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110018-wp-smoke-validation/restore.md`
 - `risks`:
@@ -111,8 +110,6 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
 - `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110019-renderer-foundation/source.zip`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110019-renderer-foundation/manifest.json`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110019-renderer-foundation/diff-summary.md`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110019-renderer-foundation/restore.md`
 - `risks`:
@@ -141,8 +138,6 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
 - `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110020-admin-composer-v1/source.zip`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110020-admin-composer-v1/manifest.json`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110020-admin-composer-v1/diff-summary.md`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110020-admin-composer-v1/restore.md`
 - `risks`:
@@ -171,8 +166,6 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
 - `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110021-template-versioning/source.zip`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110021-template-versioning/manifest.json`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110021-template-versioning/diff-summary.md`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110021-template-versioning/restore.md`
 - `risks`:
@@ -200,8 +193,6 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
 - `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110022-import-export-v1/source.zip`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110022-import-export-v1/manifest.json`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110022-import-export-v1/diff-summary.md`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110022-import-export-v1/restore.md`
 - `risks`:
@@ -226,8 +217,6 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
 - `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110602-renderer-timeout-guard/source.zip`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-110602-renderer-timeout-guard/manifest.json`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110602-renderer-timeout-guard/diff-summary.md`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-110602-renderer-timeout-guard/restore.md`
 - `risks`:
@@ -253,8 +242,6 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
 - `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-111549-qa-and-release-docs/source.zip`
-- `beastside-3d-hero-banner/project-state/checkpoints/20260209-111549-qa-and-release-docs/manifest.json`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-111549-qa-and-release-docs/diff-summary.md`
 - `beastside-3d-hero-banner/project-state/checkpoints/20260209-111549-qa-and-release-docs/restore.md`
 - `risks`:
@@ -265,3 +252,132 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - Latest checkpoint hash verification passed.
 - `next_actions`:
 - Execute manual WordPress matrix from `QA_REPORT_2026-02-09.md` and mark failures with evidence screenshots/log snippets.
+
+---
+
+## Entry 010
+- `checkpoint_id`: 20260209-120529-model-fetch-normalization-fix
+- `date_utc`: 2026-02-09T12:05:29Z
+- `request`: Fix runtime `Failed to fetch` model load errors using direct URL normalization and actionable diagnostics without introducing a proxy.
+- `decision`: Added a model URL normalization pipeline (GitHub blob, Dropbox share, protocol-relative), pre-load URL guards (invalid/non-direct URL and HTTPS mixed-content block), and classified model-load diagnostics (`network_or_cors_blocked`, `mixed_content_blocked`, `unsupported_or_not_direct_url`, `unknown_model_load_error`) with troubleshooting metadata (`modelUrlOriginal`, `modelUrlResolved`, `normalizationRule`, `hint`).
+- `files`:
+- `beastside-3d-hero-banner/assets/js/frontend.js`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-120529-model-fetch-normalization-fix/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-120529-model-fetch-normalization-fix/restore.md`
+- `risks`:
+- External hosts may still block browser fetches due to CORS/hotlink policies even after URL normalization; direct, CORS-enabled hosting remains required.
+- Manual WordPress runtime verification is still pending until user test signal is provided.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- Static verification confirmed normalization and error taxonomy hooks exist in renderer load path.
+- Existing fallback/event flow remains unchanged and still routes through `setFallback` on model-load failure.
+- `next_actions`:
+- Pause for user manual test signal (Phase 2 QA Hold).
+- After user confirmation, append validation evidence, create post-QA checkpoint, and continue next phase on `beta-updates`.
+
+---
+
+## Entry 011
+- `checkpoint_id`: 20260209-123342-model-fetch-proxy-fallback
+- `date_utc`: 2026-02-09T12:33:42Z
+- `request`: Resolve persistent `Failed to fetch` in admin live preview after normalization-only fix.
+- `decision`: Added secure admin-only model proxy endpoint (`wp_ajax_bs3d_model_proxy`) with nonce/capability checks and URL restrictions, then updated frontend loader to retry through proxy when direct model fetch fails due to network/CORS or mixed-content constraints in `admin-preview`.
+- `files`:
+- `beastside-3d-hero-banner/includes/class-bs3d-renderer.php`
+- `beastside-3d-hero-banner/assets/js/frontend.js`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-123342-model-fetch-proxy-fallback/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-123342-model-fetch-proxy-fallback/restore.md`
+- `risks`:
+- Proxy fallback is intentionally restricted to admin preview and does not alter public visitor fetch behavior.
+- GLTF files with external relative dependencies may still require direct-accessible asset hosting; GLB single-file assets are the preferred format.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- Static verification confirms localized proxy context keys, admin ajax route, and retry diagnostics (`model_proxy_retry`, `model_proxy_success`).
+- `php -l` could not be executed in this shell because PHP CLI is not installed.
+- `next_actions`:
+- Retest model load in admin composer live preview and confirm direct failure now recovers via proxy retry.
+- If validation passes, proceed to post-QA log compact/checkpoint and move next phase work onto `beta-updates`.
+
+---
+
+## Entry 012
+- `checkpoint_id`: 20260209-123937-model-fetch-proxy-cachebust
+- `date_utc`: 2026-02-09T12:39:37Z
+- `request`: Ensure latest model-fetch fix is actually loaded in browser during retest.
+- `decision`: Bumped plugin version to `0.2.1` so enqueued frontend assets are cache-busted and admin preview receives updated proxy retry logic immediately.
+- `files`:
+- `beastside-3d-hero-banner/beastside-3d-hero-banner.php`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-123937-model-fetch-proxy-cachebust/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-123937-model-fetch-proxy-cachebust/restore.md`
+- `risks`:
+- Browser cache invalidation is improved by version bump, but CDN/server cache layers may still require hard refresh depending on host setup.
+- `validation`:
+- Plugin header version and `BS3D_VERSION` constant now both `0.2.1`.
+- Static inspection confirms script enqueue version source remains `BS3D_VERSION`.
+- `next_actions`:
+- Retest admin live preview with hard refresh and verify fallback is cleared for valid model URL.
+
+---
+
+## Entry 013
+- `checkpoint_id`: 20260209-124728-activation-output-bom-fix
+- `date_utc`: 2026-02-09T12:47:28Z
+- `request`: Resolve plugin activation warning showing `3 characters of unexpected output`.
+- `decision`: Found and removed UTF-8 BOM bytes from `includes/class-bs3d-banner-post-type.php`, which was emitting output before headers during activation include loading.
+- `files`:
+- `beastside-3d-hero-banner/includes/class-bs3d-banner-post-type.php`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-124728-activation-output-bom-fix/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-124728-activation-output-bom-fix/restore.md`
+- `risks`:
+- Additional locked temp directories at workspace root remain from prior archive attempts and may require elevated/manual cleanup, but they are outside plugin runtime path.
+- `validation`:
+- Full plugin PHP BOM scan returns `NO_PHP_BOM_FOUND`.
+- Git diff confirms only BOM marker was removed (`﻿<?php` to `<?php`).
+- `next_actions`:
+- Reinstall/reactivate plugin and confirm activation warning is gone.
+- Continue model-fetch retest only after activation output issue is confirmed resolved.
+
+---
+
+## Entry 014
+- `checkpoint_id`: 20260209-125515-save-state-docs-only-and-proxy-parse-fix
+- `date_utc`: 2026-02-09T12:55:15Z
+- `request`: Stop save-state bloat (markdown-only checkpoints) and fix admin diagnostics GLB parse failure during proxy retry.
+- `decision`: Updated checkpoint policy to docs-only (`diff-summary.md`, `restore.md`), pruned checkpoint archive zips, retained manifest files as tiny deprecated stubs where ACL blocked deletion, and fixed frontend proxy retry to fetch raw model bytes/text then parse via `GLTFLoader.parse` instead of `loader.load(admin-ajax.php...)`.
+- `files`:
+- `beastside-3d-hero-banner/assets/js/frontend.js`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/QA_REPORT_2026-02-09.md`
+- `beastside-3d-hero-banner/project-state/RELEASE_CHECKLIST_v0.2.0.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-125515-save-state-docs-only-and-proxy-parse-fix/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-125515-save-state-docs-only-and-proxy-parse-fix/restore.md`
+- `risks`:
+- Some historical checkpoint `manifest.json` files could not be deleted due filesystem ACL; they are reduced to lightweight stubs.
+- Existing untracked temp directories at workspace root remain ACL-locked and may require manual OS-level cleanup.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- Static verification confirms proxy retry now uses `fetch` + `loader.parse` path.
+- Save-state policy docs now specify markdown-only checkpoint artifacts.
+- `next_actions`:
+- Retest backend live preview model URL load and confirm diagnostics no longer show `Unexpected token 'g' ... not valid JSON`.
+- If retest passes, proceed with post-QA compact entry and beta-branch continuation.
+

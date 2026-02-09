@@ -87,6 +87,20 @@ This document is the canonical source of approved requirements and acceptance cr
 - `THREE.GLTFLoader`.
 - `THREE.DRACOLoader` with decoder path `assets/vendor/draco/`.
 - `MeshoptDecoder` from `assets/vendor/meshopt/meshopt_decoder.js`.
+- Model URLs must pass a pre-load normalization pipeline before GLTF fetch.
+- Supported normalization rules in v1:
+- GitHub `blob` URLs to `raw.githubusercontent.com`.
+- Dropbox share URLs to direct/raw URLs.
+- Protocol-relative URLs (`//...`) resolved against current page protocol.
+- Renderer must reject invalid/empty/non-direct model URLs before load attempt.
+- On HTTPS pages, HTTP model URLs must be blocked as mixed content before load attempt.
+- For `admin-preview` only, if direct fetch fails due to network/CORS or mixed-content constraints, renderer may retry through a secured WordPress admin proxy endpoint.
+- Admin model proxy fallback requirements:
+- `manage_options` capability required.
+- Request nonce required.
+- URL scheme restricted to `http|https`.
+- Hostname must not be local/private IP target.
+- Path must target `.glb` or `.gltf`.
 - Max runtime models in v1: `3`.
 - Scene schema includes explicit sections:
 - `sceneSchemaVersion`.
@@ -150,6 +164,16 @@ This document is the canonical source of approved requirements and acceptance cr
 - `code`
 - `message`
 - `meta`
+- Model fetch diagnostics metadata fields:
+- `modelUrlOriginal`
+- `modelUrlResolved`
+- `normalizationRule`
+- `hint`
+- Model fetch error code taxonomy includes:
+- `network_or_cors_blocked`
+- `mixed_content_blocked`
+- `unsupported_or_not_direct_url`
+- `unknown_model_load_error`
 
 ### Retention and Safety
 - Diagnostics are persisted in plugin-managed DB table.
@@ -188,6 +212,9 @@ This document is the canonical source of approved requirements and acceptance cr
 14. Template apply/save, version restore, and duplicate workflows are available to admins.
 15. Import/export supports single and bulk packages with conflict-mode controls.
 16. Save-state docs/checkpoint artifacts are updated for each accepted change.
+17. Model fetch failures are classified with actionable diagnostics and URL normalization metadata.
+18. Admin preview can recover from CORS/network fetch failures via secure proxy fallback without changing public shortcode API.
+19. Plugin activation must produce no unexpected output (including UTF-8 BOM leakage from PHP files).
 
 ## Non-Negotiable Defaults
 - Debug mode defaults ON.
@@ -200,24 +227,17 @@ This document is the canonical source of approved requirements and acceptance cr
 - Root folder: `beastside-3d-hero-banner/project-state`.
 - Checkpoint folder naming: `beastside-3d-hero-banner/project-state/checkpoints/YYYYMMDD-HHMMSS-change-slug`.
 - Required files inside each checkpoint folder:
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
+- Save-state storage policy (docs-only, effective 2026-02-09):
+- Do not store `source.zip` snapshots.
+- Do not require `manifest.json`.
+- Checkpoints are lightweight markdown records only.
+- Historical binary checkpoint artifacts may be pruned to reduce workspace bloat.
 - Checkpoint trigger: every accepted change that modifies code, configuration, or documentation in build scope.
 - Rollback default: latest stable checkpoint in `CHECKPOINT_INDEX.md`, unless a specific checkpoint ID is requested.
 
 ## Interface Standards
-- `manifest.json` required fields:
-- `checkpoint_id`
-- `created_utc`
-- `change_slug`
-- `scope`
-- `summary`
-- `files_snapshot_root`
-- `artifact_sha256`
-- `feature_ids`
-- `validation` with `syntax`, `manual_checks`, `known_gaps`
 - `BUILD_LOG.md` required entry fields:
 - `checkpoint_id`
 - `date_utc`
@@ -232,7 +252,7 @@ This document is the canonical source of approved requirements and acceptance cr
 - IDs are immutable after creation.
 
 ## Workflow Rules
-1. Read latest `PRD_ADDENDUM_CANONICAL.md`, `BUILD_LOG.md`, `FEATURE_MATRIX.md`, and latest checkpoint `manifest.json`.
+1. Read latest `PRD_ADDENDUM_CANONICAL.md`, `BUILD_LOG.md`, `FEATURE_MATRIX.md`, and latest checkpoint markdown notes.
 2. Implement accepted change.
 3. Update all three core docs.
 4. Create checkpoint folder with required files.
@@ -243,8 +263,7 @@ This document is the canonical source of approved requirements and acceptance cr
 ## Validation Scenarios
 1. Save-state integrity:
 - Check required checkpoint files exist.
-- Verify `artifact_sha256` matches `source.zip`.
-- Confirm restore instructions are complete and executable.
+- Confirm checkpoint markdown notes are complete and executable.
 2. Documentation consistency:
 - Ensure each checkpoint has corresponding entries in `BUILD_LOG.md` and `CHECKPOINT_INDEX.md`.
 - Ensure each implemented feature row maps to at least one checkpoint ID.
@@ -267,3 +286,8 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260209-110022-import-export-v1 | 2026-02-09T11:00:22Z | Added schema-versioned import/export package workflows with conflict handling and diagnostics logging. |
 | 20260209-110602-renderer-timeout-guard | 2026-02-09T11:06:02Z | Hardened renderer fallback path to block late async loads from triggering false success after timeout/error. |
 | 20260209-111549-qa-and-release-docs | 2026-02-09T11:15:49Z | Added formal QA execution report and v0.2.0 release checklist artifacts after GitHub push. |
+| 20260209-120529-model-fetch-normalization-fix | 2026-02-09T12:05:29Z | Added model URL normalization, mixed-content/invalid URL guards, and classified fetch diagnostics for CORS/network issues. |
+| 20260209-123342-model-fetch-proxy-fallback | 2026-02-09T12:33:42Z | Added secure admin-preview model proxy fallback and frontend retry path for direct fetch failures. |
+| 20260209-123937-model-fetch-proxy-cachebust | 2026-02-09T12:39:37Z | Bumped plugin version to 0.2.1 to force frontend cache-bust for model proxy fallback rollout and updated checkpoint linkage. |
+| 20260209-124728-activation-output-bom-fix | 2026-02-09T12:47:28Z | Removed UTF-8 BOM from included PHP file to eliminate activation-time unexpected output bytes. |
+| 20260209-125515-save-state-docs-only-and-proxy-parse-fix | 2026-02-09T12:55:15Z | Switched checkpoints to markdown-only storage (no source zip/manifest) and fixed admin proxy GLB parse path via fetch+GLTFLoader.parse. |

@@ -1,26 +1,3 @@
 ﻿{
-    "checkpoint_id":  "20260209-110019-renderer-foundation",
-    "created_utc":  "2026-02-09T11:00:19Z",
-    "change_slug":  "renderer-foundation",
-    "scope":  "incremental-change",
-    "summary":  "Implemented production renderer foundation with real Three.js GLTF loading, Draco/Meshopt decoder wiring, runtime fallback behavior, and true render-success gating.",
-    "files_snapshot_root":  "beastside-3d-hero-banner",
-    "artifact_sha256":  "261b7dab52f18fc9312cd2f9983dd714647ea2d37021a78f42de09aa0001c361",
-    "feature_ids":  [
-                        "BS3D-F022",
-                        "BS3D-F023"
-                    ],
-    "validation":  {
-                       "syntax":  [
-                                      "node --check assets/js/frontend.js: pass"
-                                  ],
-                       "manual_checks":  [
-                                             "Verified frontend runtime now initializes real WebGL renderer and GLTF loader chain.",
-                                             "Verified render_success emits only after first rendered frame and required model load completion.",
-                                             "Verified fallback timeout and model-load error paths emit diagnostics and fallback state."
-                                         ],
-                       "known_gaps":  [
-                                          "WordPress browser runtime test still required to validate live GLTF assets and FPS telemetry under real content"
-                                      ]
-                   }
+  "deprecated": "Docs-only checkpoint mode active. See diff-summary.md and restore.md."
 }

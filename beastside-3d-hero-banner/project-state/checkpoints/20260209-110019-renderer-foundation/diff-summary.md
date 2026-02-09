@@ -9,8 +9,8 @@ Implemented production renderer foundation with real Three.js GLTF loading, Drac
 - Made render_success depend on real render readiness and model completion.
 
 ## Artifact Files
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
+
+
 

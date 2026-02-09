@@ -98,6 +98,235 @@
       });
   }
 
+  function getLocationHref() {
+    return window.location && typeof window.location.href === "string" ? window.location.href : "";
+  }
+
+  function isLikelyDirectModelUrl(url) {
+    return /\.gltf($|[?#])/i.test(url) || /\.glb($|[?#])/i.test(url);
+  }
+
+  function normalizeModelUrl(rawUrl) {
+    var original = typeof rawUrl === "string" ? rawUrl.trim() : "";
+    if (!original) {
+      return {
+        ok: false,
+        code: "unsupported_or_not_direct_url",
+        reason: "empty_url",
+        message: "Model URL is empty",
+        modelUrlOriginal: original,
+        modelUrlResolved: "",
+        normalizationRule: "none",
+        hint: "Provide a direct .glb or .gltf URL.",
+      };
+    }
+
+    var resolved = original;
+    var normalizationRule = "none";
+
+    if (resolved.indexOf("//") === 0) {
+      var pageProtocol =
+        window.location && typeof window.location.protocol === "string" ? window.location.protocol : "https:";
+      resolved = pageProtocol + resolved;
+      normalizationRule = "protocol_relative";
+    }
+
+    var parsedUrl = null;
+    try {
+      parsedUrl = new URL(resolved, getLocationHref() || undefined);
+      resolved = parsedUrl.href;
+    } catch (error) {
+      return {
+        ok: false,
+        code: "unsupported_or_not_direct_url",
+        reason: "invalid_url",
+        message: "Model URL is invalid",
+        modelUrlOriginal: original,
+        modelUrlResolved: resolved,
+        normalizationRule: normalizationRule,
+        hint: "Use a full direct URL to a .glb or .gltf asset.",
+      };
+    }
+
+    var hostname = (parsedUrl.hostname || "").toLowerCase();
+    var pathname = parsedUrl.pathname || "";
+
+    if (
+      hostname === "github.com" &&
+      pathname.indexOf("/blob/") > -1 &&
+      pathname.split("/").length >= 5
+    ) {
+      var segments = pathname.split("/");
+      var owner = segments[1] || "";
+      var repo = segments[2] || "";
+      var blobIndex = segments.indexOf("blob");
+      var branch = blobIndex > -1 && segments.length > blobIndex + 1 ? segments[blobIndex + 1] : "";
+      var filePath = blobIndex > -1 ? segments.slice(blobIndex + 2).join("/") : "";
+      if (owner && repo && branch && filePath) {
+        resolved = "https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch + "/" + filePath;
+        normalizationRule = "github_blob_to_raw";
+      }
+    }
+
+    if (
+      hostname === "www.dropbox.com" ||
+      hostname === "dropbox.com" ||
+      hostname === "dl.dropboxusercontent.com"
+    ) {
+      var dropboxUrl = new URL(resolved);
+      if (hostname === "www.dropbox.com" || hostname === "dropbox.com") {
+        dropboxUrl.hostname = "dl.dropboxusercontent.com";
+      }
+      dropboxUrl.searchParams.delete("dl");
+      dropboxUrl.searchParams.delete("raw");
+      dropboxUrl.searchParams.set("raw", "1");
+      resolved = dropboxUrl.href;
+      normalizationRule = "dropbox_share_to_direct";
+    }
+
+    if (
+      window.location &&
+      window.location.protocol === "https:" &&
+      /^http:\/\//i.test(resolved)
+    ) {
+      return {
+        ok: false,
+        code: "mixed_content_blocked",
+        reason: "mixed_content_blocked",
+        message: "Model URL blocked due to insecure http on https page",
+        modelUrlOriginal: original,
+        modelUrlResolved: resolved,
+        normalizationRule: normalizationRule,
+        hint: "Use an https model URL or upload the model to WordPress Media.",
+      };
+    }
+
+    if (!isLikelyDirectModelUrl(resolved)) {
+      return {
+        ok: false,
+        code: "unsupported_or_not_direct_url",
+        reason: "non_direct_url",
+        message: "Model URL does not appear to be a direct .glb/.gltf asset",
+        modelUrlOriginal: original,
+        modelUrlResolved: resolved,
+        normalizationRule: normalizationRule,
+        hint: "Use a direct file URL ending in .glb or .gltf.",
+      };
+    }
+
+    return {
+      ok: true,
+      url: resolved,
+      modelUrlOriginal: original,
+      modelUrlResolved: resolved,
+      normalizationRule: normalizationRule,
+      hint: "",
+    };
+  }
+
+  function classifyModelLoadError(error, normalized) {
+    var message = error && error.message ? String(error.message) : "Unknown model load error";
+    var lower = message.toLowerCase();
+    var code = "unknown_model_load_error";
+    var hint = "Ensure the URL is direct, public, and allows cross-origin requests.";
+
+    if (
+      lower.indexOf("failed to fetch") > -1 ||
+      lower.indexOf("networkerror") > -1 ||
+      lower.indexOf("cors") > -1 ||
+      lower.indexOf("cross-origin") > -1
+    ) {
+      code = "network_or_cors_blocked";
+      hint = "Host the model with CORS allowed or use WordPress Media Library URL.";
+    } else if (lower.indexOf("mixed content") > -1) {
+      code = "mixed_content_blocked";
+      hint = "Use https model URL when the page is served over https.";
+    } else if (
+      lower.indexOf("404") > -1 ||
+      lower.indexOf("unexpected token") > -1 ||
+      lower.indexOf("invalid") > -1
+    ) {
+      code = "unsupported_or_not_direct_url";
+      hint = "Verify the link returns the raw .glb/.gltf file, not an HTML share page.";
+    }
+
+    return {
+      code: code,
+      message: message,
+      meta: {
+        modelUrlOriginal: normalized && normalized.modelUrlOriginal ? normalized.modelUrlOriginal : "",
+        modelUrlResolved: normalized && normalized.modelUrlResolved ? normalized.modelUrlResolved : "",
+        normalizationRule: normalized && normalized.normalizationRule ? normalized.normalizationRule : "none",
+        hint: hint,
+      },
+    };
+  }
+
+  function canUseModelProxy(payload) {
+    return (
+      payload &&
+      payload.surface === "admin-preview" &&
+      !!context.isAdminRequest &&
+      typeof context.modelProxyUrl === "string" &&
+      context.modelProxyUrl.length > 0 &&
+      typeof context.modelProxyNonce === "string" &&
+      context.modelProxyNonce.length > 0
+    );
+  }
+
+  function buildModelProxyUrl(payload, modelUrl) {
+    if (!canUseModelProxy(payload) || typeof modelUrl !== "string" || !modelUrl.trim()) {
+      return "";
+    }
+
+    var base = context.modelProxyUrl;
+    var separator = base.indexOf("?") === -1 ? "?" : "&";
+    return (
+      base +
+      separator +
+      "nonce=" +
+      encodeURIComponent(context.modelProxyNonce) +
+      "&url=" +
+      encodeURIComponent(modelUrl.trim())
+    );
+  }
+
+  function isTextGltfUrl(url) {
+    return /\.gltf($|[?#])/i.test(String(url || ""));
+  }
+
+  function deriveResourcePath(url) {
+    try {
+      var parsed = new URL(String(url || ""), getLocationHref() || undefined);
+      var pathname = parsed.pathname || "/";
+      var lastSlash = pathname.lastIndexOf("/");
+      var dir = lastSlash >= 0 ? pathname.substring(0, lastSlash + 1) : "/";
+      return parsed.origin + dir;
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function stripUtf8BomFromText(value) {
+    var text = typeof value === "string" ? value : "";
+    if (!text) {
+      return text;
+    }
+    return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  }
+
+  function stripUtf8BomFromArrayBuffer(value) {
+    if (!(value instanceof ArrayBuffer) || value.byteLength < 3) {
+      return value;
+    }
+
+    var bytes = new Uint8Array(value);
+    if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+      return value.slice(3);
+    }
+    return value;
+  }
+
   function emitDiagnostic(payload, level, code, message, meta, critical) {
     var detail = {
       timestamp: new Date().toISOString(),
@@ -648,33 +877,260 @@
 
       var loads = modelEntries.map(function (model, index) {
         return new Promise(function (resolve, reject) {
-          loader.load(
-            model.url,
-            function (gltf) {
-              if (disposed || !rootGroup) {
-                resolve();
-                return;
-              }
+          var normalized = normalizeModelUrl(model.url);
+          var proxyEnabled = canUseModelProxy(payload);
 
-              var root = gltf && (gltf.scene || (Array.isArray(gltf.scenes) ? gltf.scenes[0] : null));
-              if (!root) {
-                reject(new Error("GLTF scene missing"));
-                return;
-              }
-
-              applyModelTransform(root, model);
-              rootGroup.add(root);
-              state.modelsLoaded += 1;
-              state.drawCallEstimate += estimateDrawCalls(root);
-              updateOverlay();
+          function onModelLoaded(gltf, viaProxy) {
+            if (disposed || !rootGroup) {
               resolve();
-            },
-            undefined,
-            function (error) {
-              var errorMessage = error && error.message ? error.message : "Unknown model load error";
-              reject(new Error("Model #" + (index + 1) + " failed: " + errorMessage));
+              return;
             }
-          );
+
+            var root = gltf && (gltf.scene || (Array.isArray(gltf.scenes) ? gltf.scenes[0] : null));
+            if (!root) {
+              reject(new Error("GLTF scene missing"));
+              return;
+            }
+
+            applyModelTransform(root, model);
+            rootGroup.add(root);
+            state.modelsLoaded += 1;
+            state.drawCallEstimate += estimateDrawCalls(root);
+            updateOverlay();
+
+            if (viaProxy) {
+              emitDiagnostic(
+                payload,
+                "info",
+                "model_proxy_success",
+                "Model #" + (index + 1) + " loaded via admin proxy fallback",
+                {
+                  modelIndex: index + 1,
+                  modelUrlOriginal: normalized.modelUrlOriginal || "",
+                  modelUrlResolved: normalized.modelUrlResolved || "",
+                  normalizationRule: normalized.normalizationRule || "none",
+                  hint: "Direct model fetch failed, proxy fallback succeeded.",
+                },
+                false
+              );
+            }
+
+            resolve();
+          }
+
+          function finalizeLoadError(classified, viaProxy) {
+            emitDiagnostic(
+              payload,
+              "error",
+              classified.code,
+              "Model #" + (index + 1) + " load failed",
+              Object.assign(
+                {
+                  modelIndex: index + 1,
+                  viaProxy: !!viaProxy,
+                },
+                classified.meta
+              ),
+              false
+            );
+            reject(new Error("Model #" + (index + 1) + " failed: " + classified.message));
+          }
+
+          function attemptProxyLoad(proxyUrl) {
+            var sourceUrl = normalized.modelUrlResolved || normalized.modelUrlOriginal || "";
+            var expectsText = isTextGltfUrl(sourceUrl);
+
+            if (typeof fetch !== "function") {
+              finalizeLoadError(
+                {
+                  code: "model_proxy_fetch_failed",
+                  message: "Proxy retry unavailable: fetch API not available",
+                  meta: {
+                    modelUrlOriginal: normalized.modelUrlOriginal || "",
+                    modelUrlResolved: normalized.modelUrlResolved || "",
+                    normalizationRule: normalized.normalizationRule || "none",
+                    hint: "Use a modern browser for admin preview proxy fallback.",
+                  },
+                },
+                true
+              );
+              return;
+            }
+
+            if (!loader || typeof loader.parse !== "function") {
+              finalizeLoadError(
+                {
+                  code: "model_proxy_parse_failed",
+                  message: "Proxy retry unavailable: GLTFLoader.parse not available",
+                  meta: {
+                    modelUrlOriginal: normalized.modelUrlOriginal || "",
+                    modelUrlResolved: normalized.modelUrlResolved || "",
+                    normalizationRule: normalized.normalizationRule || "none",
+                    hint: "GLTF loader runtime is not fully initialized.",
+                  },
+                },
+                true
+              );
+              return;
+            }
+
+            fetch(proxyUrl, {
+              method: "GET",
+              credentials: "same-origin",
+            })
+              .then(function (response) {
+                if (!response.ok) {
+                  throw new Error("Proxy HTTP " + response.status);
+                }
+                return expectsText ? response.text() : response.arrayBuffer();
+              })
+              .then(function (modelData) {
+                if (disposed) {
+                  resolve();
+                  return;
+                }
+
+                modelData = expectsText
+                  ? stripUtf8BomFromText(modelData)
+                  : stripUtf8BomFromArrayBuffer(modelData);
+
+                var resourcePath = deriveResourcePath(sourceUrl);
+                loader.parse(
+                  modelData,
+                  resourcePath,
+                  function (gltf) {
+                    onModelLoaded(gltf, true);
+                  },
+                  function (parseError) {
+                    finalizeLoadError(
+                      {
+                        code: "model_proxy_parse_failed",
+                        message:
+                          parseError && parseError.message
+                            ? parseError.message
+                            : "Proxy model parse failed",
+                        meta: {
+                          modelUrlOriginal: normalized.modelUrlOriginal || "",
+                          modelUrlResolved: normalized.modelUrlResolved || "",
+                          normalizationRule: normalized.normalizationRule || "none",
+                          hint:
+                            "Proxy response fetched but could not be parsed as GLTF/GLB. Check for upstream response corruption or non-model bytes.",
+                        },
+                      },
+                      true
+                    );
+                  }
+                );
+              })
+              .catch(function (proxyError) {
+                finalizeLoadError(
+                  {
+                    code: "model_proxy_fetch_failed",
+                    message:
+                      proxyError && proxyError.message
+                        ? proxyError.message
+                        : "Proxy fetch failed",
+                    meta: {
+                      modelUrlOriginal: normalized.modelUrlOriginal || "",
+                      modelUrlResolved: normalized.modelUrlResolved || "",
+                      normalizationRule: normalized.normalizationRule || "none",
+                      hint: "Admin proxy could not fetch the remote model URL.",
+                    },
+                  },
+                  true
+                );
+              });
+          }
+
+          function attemptLoad(targetUrl, viaProxy) {
+            if (viaProxy) {
+              attemptProxyLoad(targetUrl);
+              return;
+            }
+
+            loader.load(
+              targetUrl,
+              function (gltf) {
+                onModelLoaded(gltf, viaProxy);
+              },
+              undefined,
+              function (error) {
+                var classified = classifyModelLoadError(error, normalized);
+                if (!viaProxy && proxyEnabled && classified.code === "network_or_cors_blocked") {
+                  var proxyRetryUrl = buildModelProxyUrl(
+                    payload,
+                    normalized.modelUrlResolved || normalized.modelUrlOriginal || targetUrl
+                  );
+                  if (proxyRetryUrl) {
+                    emitDiagnostic(
+                      payload,
+                      "warn",
+                      "model_proxy_retry",
+                      "Retrying model #" + (index + 1) + " through admin proxy",
+                      {
+                        modelIndex: index + 1,
+                        modelUrlOriginal: normalized.modelUrlOriginal || "",
+                        modelUrlResolved: normalized.modelUrlResolved || "",
+                        normalizationRule: normalized.normalizationRule || "none",
+                        hint: "Direct fetch failed due to network/CORS; admin proxy retry started.",
+                      },
+                      false
+                    );
+                    attemptLoad(proxyRetryUrl, true);
+                    return;
+                  }
+                }
+
+                finalizeLoadError(classified, viaProxy);
+              }
+            );
+          }
+
+          if (!normalized.ok) {
+            if (proxyEnabled && normalized.code === "mixed_content_blocked") {
+              var proxyMixedContentUrl = buildModelProxyUrl(
+                payload,
+                normalized.modelUrlResolved || normalized.modelUrlOriginal || ""
+              );
+              if (proxyMixedContentUrl) {
+                emitDiagnostic(
+                  payload,
+                  "warn",
+                  "model_proxy_retry",
+                  "Retrying mixed-content model #" + (index + 1) + " through admin proxy",
+                  {
+                    modelIndex: index + 1,
+                    modelUrlOriginal: normalized.modelUrlOriginal || "",
+                    modelUrlResolved: normalized.modelUrlResolved || "",
+                    normalizationRule: normalized.normalizationRule || "none",
+                    hint: "HTTPS page blocked HTTP model URL; admin proxy retry started.",
+                  },
+                  false
+                );
+                attemptLoad(proxyMixedContentUrl, true);
+                return;
+              }
+            }
+
+            emitDiagnostic(
+              payload,
+              "error",
+              normalized.code || "unsupported_or_not_direct_url",
+              "Model #" + (index + 1) + " URL rejected: " + (normalized.message || "Invalid URL"),
+              {
+                modelIndex: index + 1,
+                modelUrlOriginal: normalized.modelUrlOriginal || "",
+                modelUrlResolved: normalized.modelUrlResolved || "",
+                normalizationRule: normalized.normalizationRule || "none",
+                hint: normalized.hint || "Provide a direct, CORS-friendly .glb or .gltf URL.",
+              },
+              false
+            );
+            reject(new Error("Model #" + (index + 1) + " failed: " + (normalized.message || "Invalid model URL")));
+            return;
+          }
+
+          attemptLoad(normalized.url, false);
         });
       });
 

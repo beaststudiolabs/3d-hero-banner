@@ -9,8 +9,8 @@ Integrated template save/apply workflows, banner version snapshots with restore 
 - Added diagnostics signals for template/version workflow actions.
 
 ## Artifact Files
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
+
+
 

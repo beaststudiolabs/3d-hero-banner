@@ -9,8 +9,8 @@ Hardened renderer fallback path so timeout/error state blocks late async model c
 - Added no-op guard in model-load error path when fallback already active.
 
 ## Artifact Files
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
+
+
 

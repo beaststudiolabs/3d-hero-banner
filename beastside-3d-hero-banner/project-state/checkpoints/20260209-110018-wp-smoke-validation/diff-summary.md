@@ -9,8 +9,8 @@ Recorded WordPress diagnostics smoke validation evidence and updated feature tes
 - Advanced project-state docs for next execution phases.
 
 ## Artifact Files
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
+
+
 

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Banner post type and editor fields.
  *

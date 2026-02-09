@@ -14,7 +14,7 @@ Bundle all runtime vendor assets directly in the plugin package so installation 
 - Updated project-state canonical docs, feature matrix, build log, and checkpoint index.
 
 ## Artifact Files
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
+
+

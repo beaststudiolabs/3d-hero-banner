@@ -1,27 +1,3 @@
 ﻿{
-    "checkpoint_id":  "20260209-110022-import-export-v1",
-    "created_utc":  "2026-02-09T11:00:22Z",
-    "change_slug":  "import-export-v1",
-    "scope":  "incremental-change",
-    "summary":  "Finalized schema-versioned import/export package workflows for banners/templates/settings with conflict modes and diagnostics logging, and advanced plugin docs/version.",
-    "files_snapshot_root":  "beastside-3d-hero-banner",
-    "artifact_sha256":  "943cd7466c5cb62b287824012f83b94683c2e2aa8284200010dd2db377e00c26",
-    "feature_ids":  [
-                        "BS3D-F027"
-                    ],
-    "validation":  {
-                       "syntax":  [
-                                      "Import/export handler static inspection: pass",
-                                      "node --check assets/js/frontend.js: pass",
-                                      "node --check assets/js/admin-composer.js: pass"
-                                  ],
-                       "manual_checks":  [
-                                             "Verified conflict modes skip/overwrite_by_slug/import_as_copy are implemented.",
-                                             "Verified import/export actions log outcomes with surface=import-export.",
-                                             "Verified banner export now preserves post status and plugin version updated to 0.2.0."
-                                         ],
-                       "known_gaps":  [
-                                          "Roundtrip import/export QA in live WordPress instance still required"
-                                      ]
-                   }
+  "deprecated": "Docs-only checkpoint mode active. See diff-summary.md and restore.md."
 }

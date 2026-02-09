@@ -9,8 +9,8 @@ Added formal QA execution report and release checklist artifacts for v0.2.0 afte
 - Updated core project-state docs and checkpoint index linkage.
 
 ## Artifact Files
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
+
+
 

@@ -37,8 +37,6 @@ Ship `Beastside 3D Hero Banner v0.2.0` as a reproducible WordPress plugin releas
 - [ ] Update `project-state/PRD_ADDENDUM_CANONICAL.md` change history if scope changed.
 - [ ] Update `project-state/CHECKPOINT_INDEX.md` stable pointer.
 - [ ] Create release checkpoint folder with:
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
 

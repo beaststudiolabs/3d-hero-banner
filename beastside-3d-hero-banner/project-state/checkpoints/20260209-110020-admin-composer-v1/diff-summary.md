@@ -9,8 +9,8 @@ Delivered structured admin composer controls with synchronized sliders/inputs, m
 - Implemented live scene serialization and preview rerender without DB write until save.
 
 ## Artifact Files
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
+
+
 

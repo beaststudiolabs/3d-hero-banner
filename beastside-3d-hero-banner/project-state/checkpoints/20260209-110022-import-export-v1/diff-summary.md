@@ -9,8 +9,8 @@ Finalized schema-versioned import/export package workflows for banners/templates
 - Updated README and plugin version metadata for production stage.
 
 ## Artifact Files
-- `source.zip`
-- `manifest.json`
 - `diff-summary.md`
 - `restore.md`
+
+
 

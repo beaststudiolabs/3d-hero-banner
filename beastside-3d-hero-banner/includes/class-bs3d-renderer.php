@@ -16,6 +16,7 @@ class BS3D_Renderer {
 	public static function init() {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'register_assets' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'register_assets' ) );
+		add_action( 'wp_ajax_bs3d_model_proxy', array( __CLASS__, 'handle_model_proxy' ) );
 		add_shortcode( 'beastside_hero_banner', array( __CLASS__, 'render_shortcode' ) );
 	}
 
@@ -97,6 +98,8 @@ class BS3D_Renderer {
 				'dracoDecoderPath'   => trailingslashit( BS3D_PLUGIN_URL . 'assets/vendor/draco' ),
 				'meshoptConfigured'  => file_exists( BS3D_PLUGIN_DIR . 'assets/vendor/meshopt/meshopt_decoder.js' ),
 				'meshoptGlobalKey'   => 'MeshoptDecoder',
+				'modelProxyUrl'      => esc_url_raw( admin_url( 'admin-ajax.php?action=bs3d_model_proxy' ) ),
+				'modelProxyNonce'    => wp_create_nonce( 'bs3d_model_proxy' ),
 			)
 		);
 	}
@@ -226,5 +229,192 @@ class BS3D_Renderer {
 			'scene'          => isset( $data['scene'] ) && is_array( $data['scene'] ) ? $data['scene'] : array(),
 			'posterUrl'      => (string) $data['poster_url'],
 		);
+	}
+
+	/**
+	 * Proxy model requests for admin preview fallback.
+	 */
+	public static function handle_model_proxy() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			status_header( 403 );
+			wp_die( 'Forbidden' );
+		}
+
+		$nonce = isset( $_GET['nonce'] ) ? sanitize_text_field( wp_unslash( $_GET['nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'bs3d_model_proxy' ) ) {
+			status_header( 403 );
+			wp_die( 'Invalid nonce' );
+		}
+
+		$raw_url = isset( $_GET['url'] ) ? esc_url_raw( wp_unslash( $_GET['url'] ) ) : '';
+		$url     = self::sanitize_model_proxy_url( $raw_url );
+		if ( empty( $url ) ) {
+			status_header( 400 );
+			wp_die( 'Invalid model URL' );
+		}
+
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout'            => 20,
+				'redirection'        => 3,
+				'reject_unsafe_urls' => true,
+				'sslverify'          => true,
+				'headers'            => array(
+					'Accept' => 'model/gltf-binary,model/gltf+json,application/octet-stream;q=0.9,*/*;q=0.1',
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			BS3D_Diagnostics::log(
+				array(
+					'level'           => 'error',
+					'surface'         => 'admin-preview',
+					'code'            => 'model_proxy_fetch_failed',
+					'message'         => $response->get_error_message(),
+					'meta'            => array(
+						'url' => $url,
+					),
+					'effective_debug' => true,
+				),
+				false
+			);
+			status_header( 502 );
+			wp_die( 'Proxy fetch failed' );
+		}
+
+		$status_code = (int) wp_remote_retrieve_response_code( $response );
+		if ( $status_code < 200 || $status_code >= 300 ) {
+			BS3D_Diagnostics::log(
+				array(
+					'level'           => 'warn',
+					'surface'         => 'admin-preview',
+					'code'            => 'model_proxy_http_status',
+					'message'         => 'Proxy upstream returned non-success status.',
+					'meta'            => array(
+						'url'        => $url,
+						'statusCode' => $status_code,
+					),
+					'effective_debug' => true,
+				),
+				false
+			);
+			status_header( 502 );
+			wp_die( 'Proxy upstream status error' );
+		}
+
+		$body = self::strip_utf8_bom( (string) wp_remote_retrieve_body( $response ) );
+		if ( '' === $body ) {
+			status_header( 502 );
+			wp_die( 'Proxy upstream returned empty body' );
+		}
+
+		$content_type = (string) wp_remote_retrieve_header( $response, 'content-type' );
+		if ( empty( $content_type ) ) {
+			$content_type = self::infer_model_content_type( $url );
+		}
+
+		$content_length = (int) wp_remote_retrieve_header( $response, 'content-length' );
+		$max_bytes      = 60 * 1024 * 1024;
+		if ( $content_length > $max_bytes || strlen( $body ) > $max_bytes ) {
+			status_header( 413 );
+			wp_die( 'Model too large for proxy limit' );
+		}
+
+		while ( ob_get_level() > 0 ) {
+			ob_end_clean();
+		}
+
+		nocache_headers();
+		header( 'Content-Type: ' . $content_type );
+		header( 'X-BS3D-Model-Proxy: 1' );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( 'Content-Length: ' . strlen( $body ) );
+		echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	/**
+	 * Validate proxy URL input.
+	 *
+	 * @param string $url Raw URL.
+	 * @return string
+	 */
+	private static function sanitize_model_proxy_url( $url ) {
+		$url   = esc_url_raw( (string) $url );
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) ) {
+			return '';
+		}
+
+		$scheme = isset( $parts['scheme'] ) ? strtolower( (string) $parts['scheme'] ) : '';
+		if ( ! in_array( $scheme, array( 'http', 'https' ), true ) ) {
+			return '';
+		}
+
+		$host = isset( $parts['host'] ) ? strtolower( (string) $parts['host'] ) : '';
+		if ( empty( $host ) || self::is_local_or_private_host( $host ) ) {
+			return '';
+		}
+
+		$path = isset( $parts['path'] ) ? (string) $parts['path'] : '';
+		if ( ! preg_match( '/\.(glb|gltf)$/i', $path ) ) {
+			return '';
+		}
+
+		return $url;
+	}
+
+	/**
+	 * Determine if host is local/private and should be blocked for proxy.
+	 *
+	 * @param string $host Hostname.
+	 * @return bool
+	 */
+	private static function is_local_or_private_host( $host ) {
+		$host = strtolower( trim( $host ) );
+		if ( in_array( $host, array( 'localhost', '127.0.0.1', '::1' ), true ) ) {
+			return true;
+		}
+
+		if ( filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			return (bool) ! filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+		}
+
+		if ( filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+			if ( preg_match( '/^(fc|fd)/i', $host ) ) {
+				return true;
+			}
+			return '::1' === $host;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Infer model content type from URL extension.
+	 *
+	 * @param string $url URL.
+	 * @return string
+	 */
+	private static function infer_model_content_type( $url ) {
+		if ( preg_match( '/\.gltf($|\?)/i', (string) $url ) ) {
+			return 'model/gltf+json';
+		}
+		return 'model/gltf-binary';
+	}
+
+	/**
+	 * Remove a leading UTF-8 BOM from payloads to keep proxy output binary-safe.
+	 *
+	 * @param string $value Raw payload.
+	 * @return string
+	 */
+	private static function strip_utf8_bom( $value ) {
+		if ( 0 === strpos( $value, "\xEF\xBB\xBF" ) ) {
+			return substr( $value, 3 );
+		}
+		return $value;
 	}
 }
