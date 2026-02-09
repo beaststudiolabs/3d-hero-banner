@@ -266,3 +266,4 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260209-110021-template-versioning | 2026-02-09T11:00:21Z | Added template workflows, per-save version snapshots, restore action, and duplicate banner workflow. |
 | 20260209-110022-import-export-v1 | 2026-02-09T11:00:22Z | Added schema-versioned import/export package workflows with conflict handling and diagnostics logging. |
 | 20260209-110602-renderer-timeout-guard | 2026-02-09T11:06:02Z | Hardened renderer fallback path to block late async loads from triggering false success after timeout/error. |
+| 20260209-111549-qa-and-release-docs | 2026-02-09T11:15:49Z | Added formal QA execution report and v0.2.0 release checklist artifacts after GitHub push. |

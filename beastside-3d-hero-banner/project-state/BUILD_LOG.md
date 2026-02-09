@@ -238,3 +238,30 @@ This log is chronological and append-only. One entry is required per checkpoint.
 - Verified model-load promise resolution path now no-ops when fallback already triggered.
 - `next_actions`:
 - Execute live timeout scenario in WP admin/frontend to confirm no false success event after fallback.
+
+---
+
+## Entry 009
+- `checkpoint_id`: 20260209-111549-qa-and-release-docs
+- `date_utc`: 2026-02-09T11:15:49Z
+- `request`: After pushing to GitHub, run option 1 QA pass and option 2 release checklist.
+- `decision`: Added explicit QA report artifact with executed automated checks and live WP matrix, plus v0.2.0 release checklist for packaging/tagging/release workflow.
+- `files`:
+- `beastside-3d-hero-banner/project-state/QA_REPORT_2026-02-09.md`
+- `beastside-3d-hero-banner/project-state/RELEASE_CHECKLIST_v0.2.0.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-111549-qa-and-release-docs/source.zip`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-111549-qa-and-release-docs/manifest.json`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-111549-qa-and-release-docs/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260209-111549-qa-and-release-docs/restore.md`
+- `risks`:
+- Live WP manual flows are still environment-dependent and remain pending until run in active WordPress instance.
+- `validation`:
+- `node --check` passed for frontend and admin composer scripts.
+- Vendor runtime presence checks passed.
+- Latest checkpoint hash verification passed.
+- `next_actions`:
+- Execute manual WordPress matrix from `QA_REPORT_2026-02-09.md` and mark failures with evidence screenshots/log snippets.

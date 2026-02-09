@@ -4,7 +4,8 @@ Latest stable checkpoint should be used for rollback unless a specific checkpoin
 
 | checkpoint_id | date_utc | change_slug | scope | summary | stable |
 |---|---|---|---|---|---|
-| 20260209-110602-renderer-timeout-guard | 2026-02-09T11:06:02Z | renderer-timeout-guard | incremental-change | Hardened renderer fallback path so timeout/error state blocks late async model completion from restarting render flow. | yes |
+| 20260209-111549-qa-and-release-docs | 2026-02-09T11:15:49Z | qa-and-release-docs | incremental-change | Added QA execution report artifact and v0.2.0 release checklist after GitHub push. | yes |
+| 20260209-110602-renderer-timeout-guard | 2026-02-09T11:06:02Z | renderer-timeout-guard | incremental-change | Hardened renderer fallback path so timeout/error state blocks late async model completion from restarting render flow. | no |
 | 20260209-110022-import-export-v1 | 2026-02-09T11:00:22Z | import-export-v1 | incremental-change | Finalized schema-versioned data transfer workflows with conflict handling and diagnostics logging. | no |
 | 20260209-110021-template-versioning | 2026-02-09T11:00:21Z | template-versioning | incremental-change | Added template save/apply, version snapshots/restore, and duplicate banner support. | no |
 | 20260209-110020-admin-composer-v1 | 2026-02-09T11:00:20Z | admin-composer-v1 | incremental-change | Delivered structured admin composer controls and real-time admin preview integration. | no |
