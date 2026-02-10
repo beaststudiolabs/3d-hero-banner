@@ -217,6 +217,7 @@ class BS3D_Banner_Post_Type {
 		$poster_url      = (string) get_post_meta( $post->ID, '_bs3d_poster_url', true );
 		$quality         = (string) get_post_meta( $post->ID, '_bs3d_quality_profile', true );
 		$mobile_mode     = (string) get_post_meta( $post->ID, '_bs3d_mobile_mode', true );
+		$viewport_mode   = (string) get_post_meta( $post->ID, '_bs3d_viewport_mode', true );
 		$template_options = BS3D_Template_Post_Type::get_template_options();
 		$versions        = BS3D_Version_Manager::get_versions( $post->ID, 20 );
 
@@ -229,6 +230,9 @@ class BS3D_Banner_Post_Type {
 		if ( '' === $mobile_mode ) {
 			$mobile_mode = 'adaptive';
 		}
+		if ( ! in_array( $viewport_mode, array( 'standard', 'fullscreen' ), true ) ) {
+			$viewport_mode = 'standard';
+		}
 
 		$preview_payload = BS3D_Renderer::build_payload(
 			array(
@@ -238,6 +242,7 @@ class BS3D_Banner_Post_Type {
 				'poster_url'    => $poster_url,
 				'quality'       => $quality,
 				'mobile_mode'   => $mobile_mode,
+				'viewport_mode' => $viewport_mode,
 			),
 			'admin-preview',
 			true,
@@ -410,6 +415,13 @@ class BS3D_Banner_Post_Type {
 							<option value="off" <?php selected( 'off', $mobile_mode ); ?>><?php esc_html_e( 'Off', 'beastside-3d-hero-banner' ); ?></option>
 						</select>
 					</p>
+					<p>
+						<label for="bs3d_viewport_mode"><strong><?php esc_html_e( 'Viewport Height', 'beastside-3d-hero-banner' ); ?></strong></label><br />
+						<select id="bs3d_viewport_mode" name="bs3d_viewport_mode">
+							<option value="standard" <?php selected( 'standard', $viewport_mode ); ?>><?php esc_html_e( 'Standard', 'beastside-3d-hero-banner' ); ?></option>
+							<option value="fullscreen" <?php selected( 'fullscreen', $viewport_mode ); ?>><?php esc_html_e( 'Fullscreen (100vh)', 'beastside-3d-hero-banner' ); ?></option>
+						</select>
+					</p>
 
 					<h3><?php esc_html_e( 'Reuse Workflows', 'beastside-3d-hero-banner' ); ?></h3>
 					<p>
@@ -536,6 +548,15 @@ class BS3D_Banner_Post_Type {
 		}
 		update_post_meta( $post_id, '_bs3d_mobile_mode', $mobile_mode );
 
+		$viewport_mode = isset( $_POST['bs3d_viewport_mode'] ) ? sanitize_key( wp_unslash( $_POST['bs3d_viewport_mode'] ) ) : 'standard';
+		if ( isset( $_POST['bs3d_action_apply_template'] ) && isset( $template_payload['viewport_mode'] ) ) {
+			$viewport_mode = sanitize_key( (string) $template_payload['viewport_mode'] );
+		}
+		if ( ! in_array( $viewport_mode, array( 'standard', 'fullscreen' ), true ) ) {
+			$viewport_mode = 'standard';
+		}
+		update_post_meta( $post_id, '_bs3d_viewport_mode', $viewport_mode );
+
 		if ( isset( $_POST['bs3d_action_save_template'] ) ) {
 			$template_name = isset( $_POST['bs3d_template_name'] ) ? sanitize_text_field( wp_unslash( $_POST['bs3d_template_name'] ) ) : '';
 			BS3D_Template_Post_Type::create_from_banner( $post_id, $template_name );
@@ -569,6 +590,10 @@ class BS3D_Banner_Post_Type {
 		$scene_json = get_post_meta( $post_id, '_bs3d_scene_config', true );
 		$scene      = json_decode( (string) $scene_json, true );
 		$scene      = self::sanitize_scene_config( $scene );
+		$viewport_mode = (string) get_post_meta( $post_id, '_bs3d_viewport_mode', true );
+		if ( ! in_array( $viewport_mode, array( 'standard', 'fullscreen' ), true ) ) {
+			$viewport_mode = 'standard';
+		}
 
 		return array(
 			'id'             => (int) $post_id,
@@ -580,6 +605,7 @@ class BS3D_Banner_Post_Type {
 			'poster_url'     => (string) get_post_meta( $post_id, '_bs3d_poster_url', true ),
 			'quality'        => (string) get_post_meta( $post_id, '_bs3d_quality_profile', true ) ?: 'balanced',
 			'mobile_mode'    => (string) get_post_meta( $post_id, '_bs3d_mobile_mode', true ) ?: 'adaptive',
+			'viewport_mode'  => $viewport_mode,
 		);
 	}
 

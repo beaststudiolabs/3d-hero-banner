@@ -381,3 +381,95 @@ Checkpoint storage policy note (effective 2026-02-09):
 - Retest backend live preview model URL load and confirm diagnostics no longer show `Unexpected token 'g' ... not valid JSON`.
 - If retest passes, proceed with post-QA compact entry and beta-branch continuation.
 
+---
+
+## Entry 015
+- `checkpoint_id`: 20260210-010938-frontend-safe-proxy-and-fullscreen
+- `date_utc`: 2026-02-10T01:09:38Z
+- `request`: Fix published banner model fetch failures (preview worked but frontend failed) and add per-banner fullscreen height support.
+- `decision`: Added a signed banner-bound public proxy endpoint (`bs3d_model_proxy_public`) for published shortcode/Elementor surfaces, expanded frontend retry logic to use safe proxy fallback when direct fetch is blocked, added same-site canonical host normalization, and introduced per-banner viewport mode (`standard`/`fullscreen`) persisted through templates, versions, duplicate, and import/export workflows.
+- `files`:
+- `beastside-3d-hero-banner/includes/class-bs3d-renderer.php`
+- `beastside-3d-hero-banner/assets/js/frontend.js`
+- `beastside-3d-hero-banner/includes/class-bs3d-banner-post-type.php`
+- `beastside-3d-hero-banner/assets/js/admin-composer.js`
+- `beastside-3d-hero-banner/assets/css/frontend.css`
+- `beastside-3d-hero-banner/includes/class-bs3d-template-post-type.php`
+- `beastside-3d-hero-banner/includes/class-bs3d-version-manager.php`
+- `beastside-3d-hero-banner/includes/class-bs3d-data-transfer.php`
+- `beastside-3d-hero-banner/includes/class-bs3d-plugin.php`
+- `beastside-3d-hero-banner/beastside-3d-hero-banner.php`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-010938-frontend-safe-proxy-and-fullscreen/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-010938-frontend-safe-proxy-and-fullscreen/restore.md`
+- `risks`:
+- Frontend safe-proxy endpoint now serves published pages and must remain strictly banner-bound/signature-validated to avoid open-proxy behavior.
+- Fullscreen mode is height-only (`100vh/100dvh`) and intentionally does not force full-width breakout from theme/Elementor containers.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- `node --check beastside-3d-hero-banner/assets/js/admin-composer.js`: pass.
+- Static verification confirms signed public proxy URL generation in payload and frontend fallback routing for non-admin surfaces.
+- Static verification confirms viewport mode meta save/load and wrapper class propagation (`bs3d-fullscreen`) with fullscreen CSS rules.
+- `next_actions`:
+- Run live WP verification for published shortcode/Elementor model recovery and fullscreen render behavior.
+- Mark BS3D-F035 and BS3D-F036 as `validated` only after manual evidence is captured.
+
+---
+
+## Entry 016
+- `checkpoint_id`: 20260210-050120-elementor-auto-stretch-height
+- `date_utc`: 2026-02-10T05:01:20Z
+- `request`: Fix published Elementor banner height capping so standard mode matches the Elementor container height instead of staying visually constrained.
+- `decision`: Added deterministic surface wrapper classes (`bs3d-surface-{surface}`), implemented Elementor-specific auto-stretch CSS for standard mode with existing `340px` fallback, and added `ResizeObserver`-driven runtime resizing (with window resize fallback) so canvas dimensions track container layout changes in real time.
+- `files`:
+- `beastside-3d-hero-banner/includes/class-bs3d-renderer.php`
+- `beastside-3d-hero-banner/assets/css/frontend.css`
+- `beastside-3d-hero-banner/assets/js/frontend.js`
+- `beastside-3d-hero-banner/beastside-3d-hero-banner.php`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-050120-elementor-auto-stretch-height/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-050120-elementor-auto-stretch-height/restore.md`
+- `risks`:
+- Elementor sections without explicit parent/container height still rely on the existing `min-height: 340px` fallback by design.
+- Theme-level overrides on Elementor widget/container height could still constrain available space; this change aligns to host container height rather than forcing breakout.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- Static verification confirms wrapper class output includes `bs3d-surface-elementor` and `bs3d-surface-shortcode`.
+- Static verification confirms Elementor stretch CSS chain and `ResizeObserver` setup/teardown paths in runtime.
+- Plugin version bumped to `0.2.4` for cache-busting updated frontend CSS/JS in browser.
+- `next_actions`:
+- Live WP test on published Elementor page: confirm standard mode fills section/container height and remains responsive to layout changes.
+- Capture screenshot evidence and mark BS3D-F037 as `validated` if behavior is confirmed.
+
+---
+
+## Entry 017
+- `checkpoint_id`: 20260210-055536-validation-pass-f022-f037
+- `date_utc`: 2026-02-10T05:55:36Z
+- `request`: Execute the next phase plan by moving work to `beta-updates`, running validation hardening for `BS3D-F022` through `BS3D-F037`, and refreshing release-gate artifacts for current version.
+- `decision`: Switched active workstream to `beta-updates`, recorded a dated QA addendum with live validation outcomes supplied during implementation, promoted validated rows where evidence exists (`BS3D-F022`, `F024`, `F031`, `F032`, `F035`, `F037`), and added a current release checklist file for `v0.2.4` with explicit unresolved blockers.
+- `files`:
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/QA_REPORT_2026-02-09.md`
+- `beastside-3d-hero-banner/project-state/RELEASE_CHECKLIST_v0.2.4.md`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-055536-validation-pass-f022-f037/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-055536-validation-pass-f022-f037/restore.md`
+- `risks`:
+- Full validation closure is still incomplete; several features remain `implemented` pending explicit live evidence (`BS3D-F023`, `F025`, `F026`, `F027`, `F028`, `F033`, `F036`).
+- Latest checkpoint is intentionally not marked stable because release blockers remain.
+- `validation`:
+- Branch discipline check: active branch is now `beta-updates`.
+- Manual/live evidence was captured in QA addendum for confirmed runtime items and mapped into feature statuses.
+- Remaining blockers were explicitly listed in `RELEASE_CHECKLIST_v0.2.4.md`.
+- `next_actions`:
+- Complete unresolved validation blockers in live WP and promote remaining eligible rows to `validated`.
+- Once blocker list is clear, mark latest validation checkpoint as stable and continue with admin-first UI modernization.
+

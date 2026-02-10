@@ -148,6 +148,31 @@
       };
     }
 
+    var canonicalOrigin = typeof context.siteOrigin === "string" ? context.siteOrigin.trim() : "";
+    if (canonicalOrigin) {
+      try {
+        var canonicalUrl = new URL(canonicalOrigin, getLocationHref() || undefined);
+        var normalizedCurrentHost = (parsedUrl.hostname || "").toLowerCase().replace(/^www\./, "");
+        var normalizedCanonicalHost = (canonicalUrl.hostname || "").toLowerCase().replace(/^www\./, "");
+        if (
+          normalizedCurrentHost &&
+          normalizedCanonicalHost &&
+          normalizedCurrentHost === normalizedCanonicalHost &&
+          (parsedUrl.protocol !== canonicalUrl.protocol || parsedUrl.host.toLowerCase() !== canonicalUrl.host.toLowerCase())
+        ) {
+          parsedUrl.protocol = canonicalUrl.protocol;
+          parsedUrl.host = canonicalUrl.host;
+          resolved = parsedUrl.href;
+          normalizationRule =
+            normalizationRule === "none"
+              ? "same_site_canonical_host"
+              : normalizationRule + "+same_site_canonical_host";
+        }
+      } catch (error) {
+        // Ignore malformed localized site origin.
+      }
+    }
+
     var hostname = (parsedUrl.hostname || "").toLowerCase();
     var pathname = parsedUrl.pathname || "";
 
@@ -262,7 +287,7 @@
     };
   }
 
-  function canUseModelProxy(payload) {
+  function canUseAdminModelProxy(payload) {
     return (
       payload &&
       payload.surface === "admin-preview" &&
@@ -274,20 +299,63 @@
     );
   }
 
-  function buildModelProxyUrl(payload, modelUrl) {
-    if (!canUseModelProxy(payload) || typeof modelUrl !== "string" || !modelUrl.trim()) {
+  function getPublicProxySignature(payload, modelIndex) {
+    if (!payload || !payload.modelProxySignatures || typeof payload.modelProxySignatures !== "object") {
       return "";
     }
 
-    var base = context.modelProxyUrl;
+    var signature = payload.modelProxySignatures[String(modelIndex)];
+    return typeof signature === "string" && signature.trim().length > 0 ? signature.trim() : "";
+  }
+
+  function canUsePublicModelProxy(payload, modelIndex) {
+    return (
+      payload &&
+      payload.surface !== "admin-preview" &&
+      typeof context.modelProxyPublicUrl === "string" &&
+      context.modelProxyPublicUrl.length > 0 &&
+      Number(payload.bannerId) > 0 &&
+      getPublicProxySignature(payload, modelIndex).length > 0
+    );
+  }
+
+  function canUseModelProxy(payload, modelIndex) {
+    return canUseAdminModelProxy(payload) || canUsePublicModelProxy(payload, modelIndex);
+  }
+
+  function buildModelProxyUrl(payload, modelUrl, modelIndex) {
+    if (canUseAdminModelProxy(payload)) {
+      if (typeof modelUrl !== "string" || !modelUrl.trim()) {
+        return "";
+      }
+      var adminBase = context.modelProxyUrl;
+      var adminSeparator = adminBase.indexOf("?") === -1 ? "?" : "&";
+      return (
+        adminBase +
+        adminSeparator +
+        "nonce=" +
+        encodeURIComponent(context.modelProxyNonce) +
+        "&url=" +
+        encodeURIComponent(modelUrl.trim())
+      );
+    }
+
+    if (!canUsePublicModelProxy(payload, modelIndex)) {
+      return "";
+    }
+
+    var signature = getPublicProxySignature(payload, modelIndex);
+    var base = context.modelProxyPublicUrl;
     var separator = base.indexOf("?") === -1 ? "?" : "&";
     return (
       base +
       separator +
-      "nonce=" +
-      encodeURIComponent(context.modelProxyNonce) +
-      "&url=" +
-      encodeURIComponent(modelUrl.trim())
+      "banner_id=" +
+      encodeURIComponent(String(payload.bannerId || "")) +
+      "&model_index=" +
+      encodeURIComponent(String(modelIndex)) +
+      "&sig=" +
+      encodeURIComponent(signature)
     );
   }
 
@@ -443,6 +511,8 @@
     var dracoLoader = null;
     var animationFrameId = 0;
     var resizeHandler = null;
+    var resizeObserver = null;
+    var resizeObserverTargets = [];
     var pointerMoveHandler = null;
     var pointerEnterHandler = null;
     var pointerLeaveHandler = null;
@@ -571,12 +641,94 @@
       }
     }
 
+    function getRuntimeSize() {
+      var stageRect = typeof stage.getBoundingClientRect === "function" ? stage.getBoundingClientRect() : null;
+      var containerRect =
+        container && typeof container.getBoundingClientRect === "function"
+          ? container.getBoundingClientRect()
+          : null;
+
+      var rawWidth =
+        stageRect && stageRect.width > 0
+          ? stageRect.width
+          : containerRect && containerRect.width > 0
+            ? containerRect.width
+            : stage.clientWidth || container.clientWidth || 640;
+
+      var rawHeight =
+        stageRect && stageRect.height > 0
+          ? stageRect.height
+          : containerRect && containerRect.height > 0
+            ? containerRect.height
+            : stage.clientHeight || container.clientHeight || 360;
+
+      return {
+        width: Math.max(320, Math.round(rawWidth || 640)),
+        height: Math.max(200, Math.round(rawHeight || 360)),
+      };
+    }
+
+    function handleRuntimeResize() {
+      if (!renderer || !camera) {
+        return;
+      }
+
+      var nextSize = getRuntimeSize();
+      renderer.setSize(nextSize.width, nextSize.height, false);
+      camera.aspect = nextSize.width / nextSize.height;
+      camera.updateProjectionMatrix();
+    }
+
+    function observeResizeTargets() {
+      if (typeof ResizeObserver !== "function") {
+        return;
+      }
+
+      resizeObserver = new ResizeObserver(function () {
+        handleRuntimeResize();
+      });
+
+      resizeObserverTargets = [];
+
+      function observeTarget(target) {
+        if (!target || resizeObserverTargets.indexOf(target) !== -1) {
+          return;
+        }
+        resizeObserver.observe(target);
+        resizeObserverTargets.push(target);
+      }
+
+      observeTarget(container);
+      observeTarget(stage);
+
+      if (payload.surface === "elementor" && typeof container.closest === "function") {
+        var elementorWidget =
+          container.closest(".elementor-widget-beastside_3d_hero_banner") ||
+          container.closest(".elementor-widget");
+
+        if (elementorWidget) {
+          observeTarget(elementorWidget);
+
+          var elementorWidgetContainer = elementorWidget.querySelector(".elementor-widget-container");
+          if (elementorWidgetContainer) {
+            observeTarget(elementorWidgetContainer);
+          }
+        }
+      }
+    }
+
     function disposeRenderer() {
       stopRenderLoop();
 
       if (resizeHandler) {
         window.removeEventListener("resize", resizeHandler);
         resizeHandler = null;
+      }
+
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+        resizeObserverTargets = [];
       }
 
       if (pointerMoveHandler) {
@@ -707,8 +859,9 @@
         return false;
       }
 
-      var width = Math.max(320, Math.round(stage.clientWidth || container.clientWidth || 640));
-      var height = Math.max(200, Math.round(stage.clientHeight || container.clientHeight || 360));
+      var initialSize = getRuntimeSize();
+      var width = initialSize.width;
+      var height = initialSize.height;
       var qualityProfile = payload.qualityProfile || "balanced";
 
       renderer = new THREE.WebGLRenderer({
@@ -849,18 +1002,11 @@
       }
 
       resizeHandler = function () {
-        if (!renderer || !camera) {
-          return;
-        }
-
-        var nextWidth = Math.max(320, Math.round(stage.clientWidth || container.clientWidth || 640));
-        var nextHeight = Math.max(200, Math.round(stage.clientHeight || container.clientHeight || 360));
-
-        renderer.setSize(nextWidth, nextHeight, false);
-        camera.aspect = nextWidth / nextHeight;
-        camera.updateProjectionMatrix();
+        handleRuntimeResize();
       };
       window.addEventListener("resize", resizeHandler);
+      observeResizeTargets();
+      handleRuntimeResize();
 
       return true;
     }
@@ -878,7 +1024,7 @@
       var loads = modelEntries.map(function (model, index) {
         return new Promise(function (resolve, reject) {
           var normalized = normalizeModelUrl(model.url);
-          var proxyEnabled = canUseModelProxy(payload);
+          var proxyEnabled = canUseModelProxy(payload, index);
 
           function onModelLoaded(gltf, viaProxy) {
             if (disposed || !rootGroup) {
@@ -903,13 +1049,13 @@
                 payload,
                 "info",
                 "model_proxy_success",
-                "Model #" + (index + 1) + " loaded via admin proxy fallback",
+                "Model #" + (index + 1) + " loaded via model proxy fallback",
                 {
                   modelIndex: index + 1,
                   modelUrlOriginal: normalized.modelUrlOriginal || "",
                   modelUrlResolved: normalized.modelUrlResolved || "",
                   normalizationRule: normalized.normalizationRule || "none",
-                  hint: "Direct model fetch failed, proxy fallback succeeded.",
+                  hint: "Direct model fetch failed, model proxy fallback succeeded.",
                 },
                 false
               );
@@ -949,7 +1095,7 @@
                     modelUrlOriginal: normalized.modelUrlOriginal || "",
                     modelUrlResolved: normalized.modelUrlResolved || "",
                     normalizationRule: normalized.normalizationRule || "none",
-                    hint: "Use a modern browser for admin preview proxy fallback.",
+                    hint: "Use a modern browser for model proxy fallback support.",
                   },
                 },
                 true
@@ -1034,7 +1180,7 @@
                       modelUrlOriginal: normalized.modelUrlOriginal || "",
                       modelUrlResolved: normalized.modelUrlResolved || "",
                       normalizationRule: normalized.normalizationRule || "none",
-                      hint: "Admin proxy could not fetch the remote model URL.",
+                      hint: "Model proxy could not fetch the remote model URL.",
                     },
                   },
                   true
@@ -1059,20 +1205,21 @@
                 if (!viaProxy && proxyEnabled && classified.code === "network_or_cors_blocked") {
                   var proxyRetryUrl = buildModelProxyUrl(
                     payload,
-                    normalized.modelUrlResolved || normalized.modelUrlOriginal || targetUrl
+                    normalized.modelUrlResolved || normalized.modelUrlOriginal || targetUrl,
+                    index
                   );
                   if (proxyRetryUrl) {
                     emitDiagnostic(
                       payload,
                       "warn",
                       "model_proxy_retry",
-                      "Retrying model #" + (index + 1) + " through admin proxy",
+                      "Retrying model #" + (index + 1) + " through model proxy",
                       {
                         modelIndex: index + 1,
                         modelUrlOriginal: normalized.modelUrlOriginal || "",
                         modelUrlResolved: normalized.modelUrlResolved || "",
                         normalizationRule: normalized.normalizationRule || "none",
-                        hint: "Direct fetch failed due to network/CORS; admin proxy retry started.",
+                        hint: "Direct fetch failed due to network/CORS; model proxy retry started.",
                       },
                       false
                     );
@@ -1090,20 +1237,21 @@
             if (proxyEnabled && normalized.code === "mixed_content_blocked") {
               var proxyMixedContentUrl = buildModelProxyUrl(
                 payload,
-                normalized.modelUrlResolved || normalized.modelUrlOriginal || ""
+                normalized.modelUrlResolved || normalized.modelUrlOriginal || "",
+                index
               );
               if (proxyMixedContentUrl) {
                 emitDiagnostic(
                   payload,
                   "warn",
                   "model_proxy_retry",
-                  "Retrying mixed-content model #" + (index + 1) + " through admin proxy",
+                  "Retrying mixed-content model #" + (index + 1) + " through model proxy",
                   {
                     modelIndex: index + 1,
                     modelUrlOriginal: normalized.modelUrlOriginal || "",
                     modelUrlResolved: normalized.modelUrlResolved || "",
                     normalizationRule: normalized.normalizationRule || "none",
-                    hint: "HTTPS page blocked HTTP model URL; admin proxy retry started.",
+                    hint: "HTTPS page blocked HTTP model URL; model proxy retry started.",
                   },
                   false
                 );

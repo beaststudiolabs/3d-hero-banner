@@ -17,6 +17,8 @@ class BS3D_Renderer {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'register_assets' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'register_assets' ) );
 		add_action( 'wp_ajax_bs3d_model_proxy', array( __CLASS__, 'handle_model_proxy' ) );
+		add_action( 'wp_ajax_bs3d_model_proxy_public', array( __CLASS__, 'handle_model_proxy_public' ) );
+		add_action( 'wp_ajax_nopriv_bs3d_model_proxy_public', array( __CLASS__, 'handle_model_proxy_public' ) );
 		add_shortcode( 'beastside_hero_banner', array( __CLASS__, 'render_shortcode' ) );
 	}
 
@@ -83,6 +85,12 @@ class BS3D_Renderer {
 		wp_enqueue_script( 'bs3d-frontend' );
 
 		$settings = BS3D_Settings::get_settings();
+		$site_origin = self::get_site_origin();
+		$site_host   = '';
+		if ( ! empty( $site_origin ) ) {
+			$site_host = (string) wp_parse_url( $site_origin, PHP_URL_HOST );
+		}
+
 		wp_localize_script(
 			'bs3d-frontend',
 			'BS3DDebugContext',
@@ -100,6 +108,9 @@ class BS3D_Renderer {
 				'meshoptGlobalKey'   => 'MeshoptDecoder',
 				'modelProxyUrl'      => esc_url_raw( admin_url( 'admin-ajax.php?action=bs3d_model_proxy' ) ),
 				'modelProxyNonce'    => wp_create_nonce( 'bs3d_model_proxy' ),
+				'modelProxyPublicUrl'=> esc_url_raw( admin_url( 'admin-ajax.php?action=bs3d_model_proxy_public' ) ),
+				'siteOrigin'         => $site_origin,
+				'siteHost'           => strtolower( sanitize_text_field( $site_host ) ),
 			)
 		);
 	}
@@ -186,7 +197,15 @@ class BS3D_Renderer {
 
 		$payload = self::build_payload( $data, $surface, $debug_enabled, $overlay_allowed, $lazy, $profile );
 
-		$wrapper_classes = trim( 'bs3d-banner ' . $extra_class );
+		$surface_key     = sanitize_key( (string) $surface );
+		if ( '' === $surface_key ) {
+			$surface_key = 'shortcode';
+		}
+		$surface_class   = 'bs3d-surface-' . sanitize_html_class( $surface_key );
+		$wrapper_classes = trim( 'bs3d-banner ' . $surface_class . ' ' . $extra_class );
+		if ( isset( $data['viewport_mode'] ) && 'fullscreen' === $data['viewport_mode'] ) {
+			$wrapper_classes = trim( $wrapper_classes . ' bs3d-fullscreen' );
+		}
 		ob_start();
 		?>
 		<div
@@ -225,9 +244,11 @@ class BS3D_Renderer {
 			'verbosity'      => (string) BS3D_Settings::get( 'debug_verbosity' ),
 			'qualityProfile' => ! empty( $profile ) ? $profile : (string) $data['quality'],
 			'mobileMode'     => (string) $data['mobile_mode'],
+			'viewportMode'   => (string) ( isset( $data['viewport_mode'] ) ? $data['viewport_mode'] : 'standard' ),
 			'lazy'           => (bool) $lazy,
 			'scene'          => isset( $data['scene'] ) && is_array( $data['scene'] ) ? $data['scene'] : array(),
 			'posterUrl'      => (string) $data['poster_url'],
+			'modelProxySignatures' => self::build_public_proxy_signatures( $data ),
 		);
 	}
 
@@ -253,6 +274,67 @@ class BS3D_Renderer {
 			wp_die( 'Invalid model URL' );
 		}
 
+		self::proxy_fetch_and_stream( $url, 'admin-preview' );
+	}
+
+	/**
+	 * Proxy model requests for frontend render fallback using a banner-bound signature.
+	 */
+	public static function handle_model_proxy_public() {
+		$banner_id = isset( $_GET['banner_id'] ) ? absint( $_GET['banner_id'] ) : 0;
+		$model_index = isset( $_GET['model_index'] ) ? (int) wp_unslash( $_GET['model_index'] ) : -1;
+		$signature = isset( $_GET['sig'] ) ? sanitize_text_field( wp_unslash( $_GET['sig'] ) ) : '';
+
+		if ( $banner_id <= 0 || $model_index < 0 || $model_index > 2 || empty( $signature ) ) {
+			status_header( 400 );
+			wp_die( 'Invalid proxy request' );
+		}
+
+		$banner_post = get_post( $banner_id );
+		if ( ! $banner_post || 'bs3d_banner' !== $banner_post->post_type ) {
+			status_header( 404 );
+			wp_die( 'Banner not found' );
+		}
+
+		if ( 'publish' !== $banner_post->post_status && ! current_user_can( 'manage_options' ) ) {
+			status_header( 403 );
+			wp_die( 'Banner not available' );
+		}
+
+		$url = self::resolve_banner_model_url( $banner_id, $model_index );
+		if ( empty( $url ) ) {
+			status_header( 404 );
+			wp_die( 'Model not found' );
+		}
+
+		if ( ! self::verify_public_proxy_signature( $banner_id, $model_index, $url, $signature ) ) {
+			BS3D_Diagnostics::log(
+				array(
+					'level'   => 'warn',
+					'surface' => 'frontend',
+					'code'    => 'model_proxy_signature_invalid',
+					'message' => 'Rejected public model proxy request due to invalid signature.',
+					'meta'    => array(
+						'bannerId'   => $banner_id,
+						'modelIndex' => $model_index + 1,
+					),
+				),
+				false
+			);
+			status_header( 403 );
+			wp_die( 'Invalid signature' );
+		}
+
+		self::proxy_fetch_and_stream( $url, 'frontend' );
+	}
+
+	/**
+	 * Fetch a model URL upstream and stream it to the browser.
+	 *
+	 * @param string $url Source model URL.
+	 * @param string $surface Diagnostics surface.
+	 */
+	private static function proxy_fetch_and_stream( $url, $surface ) {
 		$response = wp_remote_get(
 			$url,
 			array(
@@ -270,7 +352,7 @@ class BS3D_Renderer {
 			BS3D_Diagnostics::log(
 				array(
 					'level'           => 'error',
-					'surface'         => 'admin-preview',
+					'surface'         => $surface,
 					'code'            => 'model_proxy_fetch_failed',
 					'message'         => $response->get_error_message(),
 					'meta'            => array(
@@ -289,7 +371,7 @@ class BS3D_Renderer {
 			BS3D_Diagnostics::log(
 				array(
 					'level'           => 'warn',
-					'surface'         => 'admin-preview',
+					'surface'         => $surface,
 					'code'            => 'model_proxy_http_status',
 					'message'         => 'Proxy upstream returned non-success status.',
 					'meta'            => array(
@@ -333,6 +415,83 @@ class BS3D_Renderer {
 		header( 'Content-Length: ' . strlen( $body ) );
 		echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		exit;
+	}
+
+	/**
+	 * Build per-model signature map for public proxy fallback.
+	 *
+	 * @param array<string,mixed> $data Banner data.
+	 * @return array<string,string>
+	 */
+	private static function build_public_proxy_signatures( array $data ) {
+		$signatures = array();
+		$banner_id  = isset( $data['id'] ) ? absint( $data['id'] ) : 0;
+		$scene      = isset( $data['scene'] ) && is_array( $data['scene'] ) ? $data['scene'] : array();
+		$models     = isset( $scene['models'] ) && is_array( $scene['models'] ) ? $scene['models'] : array();
+
+		foreach ( $models as $model_index => $model ) {
+			if ( ! is_array( $model ) || empty( $model['url'] ) ) {
+				continue;
+			}
+			$url = self::sanitize_model_proxy_url( (string) $model['url'] );
+			if ( empty( $url ) ) {
+				continue;
+			}
+			$signatures[ (string) $model_index ] = self::sign_public_proxy_request( $banner_id, $model_index, $url );
+		}
+
+		return $signatures;
+	}
+
+	/**
+	 * Resolve a model URL from banner data using model index.
+	 *
+	 * @param int $banner_id Banner ID.
+	 * @param int $model_index Model index.
+	 * @return string
+	 */
+	private static function resolve_banner_model_url( $banner_id, $model_index ) {
+		$banner_data = BS3D_Banner_Post_Type::get_banner_data( $banner_id );
+		if ( empty( $banner_data ) || empty( $banner_data['scene'] ) || ! is_array( $banner_data['scene'] ) ) {
+			return '';
+		}
+
+		$scene  = $banner_data['scene'];
+		$models = isset( $scene['models'] ) && is_array( $scene['models'] ) ? $scene['models'] : array();
+		if ( ! array_key_exists( $model_index, $models ) || ! is_array( $models[ $model_index ] ) ) {
+			return '';
+		}
+
+		$model = $models[ $model_index ];
+		$url   = isset( $model['url'] ) ? (string) $model['url'] : '';
+		return self::sanitize_model_proxy_url( $url );
+	}
+
+	/**
+	 * Create HMAC signature for public proxy requests.
+	 *
+	 * @param int    $banner_id Banner ID.
+	 * @param int    $model_index Model index.
+	 * @param string $url Model URL.
+	 * @return string
+	 */
+	private static function sign_public_proxy_request( $banner_id, $model_index, $url ) {
+		$payload = absint( $banner_id ) . '|' . absint( $model_index ) . '|' . strtolower( trim( (string) $url ) );
+		return hash_hmac( 'sha256', $payload, wp_salt( 'auth' ) );
+	}
+
+	/**
+	 * Verify signature for a public proxy request.
+	 *
+	 * @param int    $banner_id Banner ID.
+	 * @param int    $model_index Model index.
+	 * @param string $url Model URL.
+	 * @param string $signature Signature from request.
+	 * @return bool
+	 */
+	private static function verify_public_proxy_signature( $banner_id, $model_index, $url, $signature ) {
+		$expected = self::sign_public_proxy_request( $banner_id, $model_index, $url );
+		return hash_equals( $expected, (string) $signature );
 	}
 
 	/**
@@ -403,6 +562,25 @@ class BS3D_Renderer {
 			return 'model/gltf+json';
 		}
 		return 'model/gltf-binary';
+	}
+
+	/**
+	 * Build canonical site origin for frontend host normalization.
+	 *
+	 * @return string
+	 */
+	private static function get_site_origin() {
+		$home = wp_parse_url( home_url( '/' ) );
+		if ( ! is_array( $home ) || empty( $home['scheme'] ) || empty( $home['host'] ) ) {
+			return '';
+		}
+
+		$origin = strtolower( (string) $home['scheme'] ) . '://' . strtolower( (string) $home['host'] );
+		if ( ! empty( $home['port'] ) ) {
+			$origin .= ':' . absint( $home['port'] );
+		}
+
+		return $origin;
 	}
 
 	/**

@@ -82,6 +82,7 @@ class BS3D_Template_Post_Type {
 			'poster_url'     => $banner_data['poster_url'],
 			'quality'        => $banner_data['quality'],
 			'mobile_mode'    => $banner_data['mobile_mode'],
+			'viewport_mode'  => isset( $banner_data['viewport_mode'] ) ? $banner_data['viewport_mode'] : 'standard',
 			'debug_override' => $banner_data['debug_override'],
 		);
 

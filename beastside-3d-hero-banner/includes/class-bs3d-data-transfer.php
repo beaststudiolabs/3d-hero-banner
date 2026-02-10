@@ -372,6 +372,11 @@ class BS3D_Data_Transfer {
 		update_post_meta( $post_id, '_bs3d_poster_url', esc_url_raw( (string) ( $meta['poster_url'] ?? '' ) ) );
 		update_post_meta( $post_id, '_bs3d_quality_profile', sanitize_key( (string) ( $meta['quality'] ?? 'balanced' ) ) );
 		update_post_meta( $post_id, '_bs3d_mobile_mode', sanitize_key( (string) ( $meta['mobile_mode'] ?? 'adaptive' ) ) );
+		$viewport_mode = sanitize_key( (string) ( $meta['viewport_mode'] ?? 'standard' ) );
+		if ( ! in_array( $viewport_mode, array( 'standard', 'fullscreen' ), true ) ) {
+			$viewport_mode = 'standard';
+		}
+		update_post_meta( $post_id, '_bs3d_viewport_mode', $viewport_mode );
 
 		BS3D_Version_Manager::create_snapshot( $post_id, 'import' );
 		return 'imported';
@@ -462,6 +467,7 @@ class BS3D_Data_Transfer {
 				'poster_url'     => $data['poster_url'],
 				'quality'        => $data['quality'],
 				'mobile_mode'    => $data['mobile_mode'],
+				'viewport_mode'  => isset( $data['viewport_mode'] ) ? $data['viewport_mode'] : 'standard',
 			),
 		);
 	}

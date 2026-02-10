@@ -4,6 +4,9 @@ Latest stable checkpoint should be used for rollback unless a specific checkpoin
 
 | checkpoint_id | date_utc | change_slug | scope | summary | stable |
 |---|---|---|---|---|---|
+| 20260210-055536-validation-pass-f022-f037 | 2026-02-10T05:55:36Z | validation-pass-f022-f037 | incremental-change | Validation hardening pass recorded live evidence for F022/F024/F031/F032/F035/F037 and added v0.2.4 release gate with explicit blockers. | no |
+| 20260210-050120-elementor-auto-stretch-height | 2026-02-10T05:01:20Z | elementor-auto-stretch-height | incremental-change | Added Elementor container auto-stretch height behavior for standard mode and ResizeObserver-driven runtime resizing. | no |
+| 20260210-010938-frontend-safe-proxy-and-fullscreen | 2026-02-10T01:09:38Z | frontend-safe-proxy-and-fullscreen | incremental-change | Added signed public model-proxy fallback for published renders and per-banner fullscreen viewport mode. | no |
 | 20260209-125515-save-state-docs-only-and-proxy-parse-fix | 2026-02-09T12:55:15Z | save-state-docs-only-and-proxy-parse-fix | incremental-change | Converted save states to markdown-only checkpoints and fixed admin proxy model parse path for GLB/GLTF. | no |
 | 20260209-124728-activation-output-bom-fix | 2026-02-09T12:47:28Z | activation-output-bom-fix | incremental-change | Removed UTF-8 BOM from PHP include file to eliminate 3-character unexpected output on activation. | no |
 | 20260209-123937-model-fetch-proxy-cachebust | 2026-02-09T12:39:37Z | model-fetch-proxy-cachebust | incremental-change | Bumped plugin version to 0.2.1 for cache-busting so model proxy fallback JS is guaranteed to load. | no |

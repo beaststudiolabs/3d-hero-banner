@@ -215,6 +215,9 @@ This document is the canonical source of approved requirements and acceptance cr
 17. Model fetch failures are classified with actionable diagnostics and URL normalization metadata.
 18. Admin preview can recover from CORS/network fetch failures via secure proxy fallback without changing public shortcode API.
 19. Plugin activation must produce no unexpected output (including UTF-8 BOM leakage from PHP files).
+20. Published shortcode/Elementor banners can recover from direct fetch CORS/network failures using signature-validated, banner-bound proxy fallback (not open proxy).
+21. Banner composer provides per-banner viewport mode (`standard` or `fullscreen`) and fullscreen mode renders at viewport height on published pages.
+22. In Elementor `standard` mode, banners auto-stretch to the widget/container height (with 340px fallback when parent height is not defined), and runtime canvas resizes when container layout changes without requiring window resize.
 
 ## Non-Negotiable Defaults
 - Debug mode defaults ON.
@@ -291,3 +294,5 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260209-123937-model-fetch-proxy-cachebust | 2026-02-09T12:39:37Z | Bumped plugin version to 0.2.1 to force frontend cache-bust for model proxy fallback rollout and updated checkpoint linkage. |
 | 20260209-124728-activation-output-bom-fix | 2026-02-09T12:47:28Z | Removed UTF-8 BOM from included PHP file to eliminate activation-time unexpected output bytes. |
 | 20260209-125515-save-state-docs-only-and-proxy-parse-fix | 2026-02-09T12:55:15Z | Switched checkpoints to markdown-only storage (no source zip/manifest) and fixed admin proxy GLB parse path via fetch+GLTFLoader.parse. |
+| 20260210-010938-frontend-safe-proxy-and-fullscreen | 2026-02-10T01:09:38Z | Added signed public-safe model proxy fallback for published banners and introduced per-banner fullscreen viewport mode (100vh/100dvh). |
+| 20260210-050120-elementor-auto-stretch-height | 2026-02-10T05:01:20Z | Added Elementor standard-mode container auto-stretch height chain and ResizeObserver runtime sizing updates to prevent capped published banner height. |

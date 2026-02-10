@@ -209,16 +209,19 @@
     }
 
     var payload = parsePreviewPayload();
+    var viewportMode = String(getValue("bs3d_viewport_mode", "standard") || "standard");
     payload.scene = sceneConfig;
     payload.surface = "admin-preview";
     payload.lazy = false;
     payload.posterUrl = String(getValue("bs3d_poster_url", "") || "");
     payload.qualityProfile = String(getValue("bs3d_quality_profile", "balanced") || "balanced");
     payload.mobileMode = String(getValue("bs3d_mobile_mode", "adaptive") || "adaptive");
+    payload.viewportMode = viewportMode;
     payload.effectiveDebug = true;
     payload.overlayEnabled = true;
 
     previewBanner.setAttribute("data-bs3d", JSON.stringify(payload));
+    previewBanner.classList.toggle("bs3d-fullscreen", viewportMode === "fullscreen");
     updatePosterImage();
 
     if (window.BS3DFrontend && typeof window.BS3DFrontend.bootstrapBanner === "function") {

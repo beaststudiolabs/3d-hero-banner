@@ -6,6 +6,26 @@
   background: radial-gradient(circle at 25% 15%, #1a2438 0%, #11161f 58%, #0b0f15 100%);
 }
 
+.bs3d-banner.bs3d-fullscreen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  border-radius: 0;
+}
+
+.elementor-widget-beastside_3d_hero_banner {
+  height: 100%;
+}
+
+.elementor-widget-beastside_3d_hero_banner .elementor-widget-container {
+  height: 100%;
+  display: flex;
+}
+
+.elementor-widget-beastside_3d_hero_banner .bs3d-banner.bs3d-surface-elementor {
+  flex: 1 1 auto;
+  height: 100%;
+}
+
 .bs3d-stage {
   position: absolute;
   inset: 0;

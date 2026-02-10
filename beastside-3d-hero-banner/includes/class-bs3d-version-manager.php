@@ -63,6 +63,7 @@ class BS3D_Version_Manager {
 				'poster_url'     => get_post_meta( $banner_id, '_bs3d_poster_url', true ),
 				'quality'        => get_post_meta( $banner_id, '_bs3d_quality_profile', true ),
 				'mobile_mode'    => get_post_meta( $banner_id, '_bs3d_mobile_mode', true ),
+				'viewport_mode'  => get_post_meta( $banner_id, '_bs3d_viewport_mode', true ),
 			),
 		);
 
@@ -166,6 +167,11 @@ class BS3D_Version_Manager {
 		update_post_meta( $banner_id, '_bs3d_poster_url', isset( $meta['poster_url'] ) ? esc_url_raw( (string) $meta['poster_url'] ) : '' );
 		update_post_meta( $banner_id, '_bs3d_quality_profile', isset( $meta['quality'] ) ? sanitize_key( (string) $meta['quality'] ) : 'balanced' );
 		update_post_meta( $banner_id, '_bs3d_mobile_mode', isset( $meta['mobile_mode'] ) ? sanitize_key( (string) $meta['mobile_mode'] ) : 'adaptive' );
+		$viewport_mode = isset( $meta['viewport_mode'] ) ? sanitize_key( (string) $meta['viewport_mode'] ) : 'standard';
+		if ( ! in_array( $viewport_mode, array( 'standard', 'fullscreen' ), true ) ) {
+			$viewport_mode = 'standard';
+		}
+		update_post_meta( $banner_id, '_bs3d_viewport_mode', $viewport_mode );
 
 		self::create_snapshot( $banner_id, 'restore' );
 		return true;

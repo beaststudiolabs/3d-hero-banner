@@ -394,6 +394,7 @@ class BS3D_Plugin {
 			'_bs3d_poster_url',
 			'_bs3d_quality_profile',
 			'_bs3d_mobile_mode',
+			'_bs3d_viewport_mode',
 		);
 		foreach ( $meta_keys as $key ) {
 			update_post_meta( $new_id, $key, get_post_meta( $banner_id, $key, true ) );
