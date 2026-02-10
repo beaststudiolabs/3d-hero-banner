@@ -226,6 +226,11 @@ This document is the canonical source of approved requirements and acceptance cr
 28. Admin preview supports dedicated edit mode for camera/point lights with axis-plane constrained drag placement (`XY`, `XZ`, `YZ`) and updates draft form coordinates in real time.
 29. Admin-only helper visuals (camera frame + ambient indicator + point-light placeholders) are rendered only on `admin-preview` surface and never on Elementor/shortcode frontend surfaces.
 30. Banner Composer layout supports the requested 3-row UX structure: row 1 preview + camera/lighting, row 2 model cards in 3 columns, row 3 remaining settings in 3 columns with responsive collapse.
+31. Scene schema v3 is supported with `lighting.ambientPosition.{x,y,z}` persisted and sanitized with backward-safe defaults.
+32. Admin preview uses TransformControls-based drag editing for `ambient`, `pointLight1-3`, and `model1-3` with XY/XZ/YZ plane constraints.
+33. Camera frame helper remains visible as a non-draggable guide in admin preview.
+34. Admin preview provides thin grid overlay (default ON), axes toggle, and selected-target floating XYZ label toggle without persisting these UI states into scene payload.
+35. Drag updates in admin preview mutate runtime + form coordinates directly without full preview re-bootstrap blink during active drag.
 
 ## Non-Negotiable Defaults
 - Debug mode defaults ON.
@@ -309,3 +314,4 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260210-085621-admin-cache-bust-hotfix | 2026-02-10T08:56:21Z | Added filemtime-based admin asset cache-busting and bumped plugin version to 0.2.6 so new admin visuals reliably appear after update/install. |
 | 20260210-092423-admin-legibility-rebalance-v2 | 2026-02-10T09:24:23Z | Fixed dark-theme legibility by hardening Composer token scope, rebalancing neutral contrast, adding fallback-safe color vars, and explicit placeholder styling; bumped version to 0.2.7. |
 | 20260210-105945-interactive-lighting-lens-layout-v1 | 2026-02-10T10:59:45Z | Added scene schema v2 (lens camera + ambient toggle + point lights), admin-only interactive helper drag placement in preview, and composer 3-row UX reflow (preview/camera-lighting, models, remaining settings). |
+| 20260210-122522-ambient-gizmo-grid-model-drag-v1 | 2026-02-10T12:25:22Z | Upgraded to scene schema v3 with `ambientPosition`, switched ambient runtime to hemisphere light, added TransformControls-based admin drag for ambient/point/model targets, and added admin-preview grid/axes/selected XYZ label toggles with no public helper rendering. |

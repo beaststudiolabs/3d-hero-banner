@@ -533,12 +533,18 @@
     var renderer = null;
     var rootGroup = null;
     var helperGroup = null;
-    var helperPickTargets = [];
     var helperPointLights = [];
+    var modelRuntimeTargets = [];
     var ambientHelper = null;
     var cameraHelper = null;
-    var raycaster = null;
-    var ambientLight = null;
+    var gridHelper = null;
+    var axesHelper = null;
+    var editorCoordinateLabel = null;
+    var transformControls = null;
+    var transformProxy = null;
+    var transformTargetType = "";
+    var transformTargetIndex = -1;
+    var hemisphereLight = null;
     var directionalLight = null;
     var runtimePointLights = [];
     var loader = null;
@@ -550,9 +556,6 @@
     var pointerMoveHandler = null;
     var pointerEnterHandler = null;
     var pointerLeaveHandler = null;
-    var pointerDownHandler = null;
-    var pointerUpHandler = null;
-    var pointerCancelHandler = null;
     var editorBridgeHandler = null;
     var timeoutHandle = 0;
     var intersectionObserver = null;
@@ -604,12 +607,10 @@
       active: payload.surface === "admin-preview",
       mode: "none",
       plane: "xy",
-      dragging: false,
-      draggedType: "",
-      draggedIndex: -1,
-      pointerId: null,
-      dragOffset: null,
-      dragPlane: null,
+      showGrid: true,
+      showAxes: true,
+      showLabels: true,
+      transformDragging: false,
     };
 
     var overlay = ensureOverlay(container, payload);
@@ -648,10 +649,13 @@
       var mode = String(value || "none");
       if (
         mode !== "none" &&
-        mode !== "camera" &&
+        mode !== "ambient" &&
         mode !== "pointLight1" &&
         mode !== "pointLight2" &&
-        mode !== "pointLight3"
+        mode !== "pointLight3" &&
+        mode !== "model1" &&
+        mode !== "model2" &&
+        mode !== "model3"
       ) {
         return "none";
       }
@@ -666,16 +670,31 @@
       return plane;
     }
 
-    function updateEditorState(mode, plane) {
+    function toEditorBool(value, fallback) {
+      if (value === true || value === "1" || value === 1 || value === "true") {
+        return true;
+      }
+      if (value === false || value === "0" || value === 0 || value === "false") {
+        return false;
+      }
+      return !!fallback;
+    }
+
+    function updateEditorState(mode, plane, showGrid, showAxes, showLabels) {
       editorState.mode = normalizeEditorMode(mode);
       editorState.plane = normalizeEditorPlane(plane);
+      editorState.showGrid = toEditorBool(showGrid, true);
+      editorState.showAxes = toEditorBool(showAxes, true);
+      editorState.showLabels = toEditorBool(showLabels, true);
 
       if (!editorState.active) {
         editorState.mode = "none";
+        editorState.showGrid = false;
+        editorState.showAxes = false;
+        editorState.showLabels = false;
       }
-
       if (editorState.mode === "none") {
-        stopEditorDrag();
+        editorState.transformDragging = false;
       }
     }
 
@@ -687,10 +706,22 @@
 
       var payloadMode = payload.editorMode || payload.editMode;
       var payloadPlane = payload.dragPlane;
+      var payloadGrid = payload.editorShowGrid;
+      var payloadAxes = payload.editorShowAxes;
+      var payloadLabels = payload.editorShowLabels;
       var attrMode = container.getAttribute("data-bs3d-edit-mode");
       var attrPlane = container.getAttribute("data-bs3d-drag-plane");
+      var attrGrid = container.getAttribute("data-bs3d-show-grid");
+      var attrAxes = container.getAttribute("data-bs3d-show-axes");
+      var attrLabels = container.getAttribute("data-bs3d-show-labels");
 
-      updateEditorState(attrMode || payloadMode || "none", attrPlane || payloadPlane || "xy");
+      updateEditorState(
+        attrMode || payloadMode || "none",
+        attrPlane || payloadPlane || "xy",
+        attrGrid || payloadGrid || "1",
+        attrAxes || payloadAxes || "1",
+        attrLabels || payloadLabels || "1"
+      );
     }
 
     function isEditModeActive() {
@@ -860,22 +891,6 @@
         pointerMoveHandler = null;
       }
 
-      if (pointerDownHandler) {
-        container.removeEventListener("pointerdown", pointerDownHandler);
-        pointerDownHandler = null;
-      }
-
-      if (pointerUpHandler) {
-        container.removeEventListener("pointerup", pointerUpHandler);
-        pointerUpHandler = null;
-      }
-
-      if (pointerCancelHandler) {
-        container.removeEventListener("pointercancel", pointerCancelHandler);
-        container.removeEventListener("lostpointercapture", pointerCancelHandler);
-        pointerCancelHandler = null;
-      }
-
       if (pointerEnterHandler) {
         container.removeEventListener("pointerenter", pointerEnterHandler);
         pointerEnterHandler = null;
@@ -891,7 +906,13 @@
         editorBridgeHandler = null;
       }
 
-      stopEditorDrag();
+      if (transformControls && typeof transformControls.dispose === "function") {
+        transformControls.dispose();
+      }
+
+      if (editorCoordinateLabel && editorCoordinateLabel.parentNode === container) {
+        container.removeChild(editorCoordinateLabel);
+      }
 
       if (scene) {
         disposeObject3D(scene);
@@ -911,12 +932,18 @@
       renderer = null;
       rootGroup = null;
       helperGroup = null;
-      helperPickTargets = [];
       helperPointLights = [];
+      modelRuntimeTargets = [];
       ambientHelper = null;
       cameraHelper = null;
-      raycaster = null;
-      ambientLight = null;
+      gridHelper = null;
+      axesHelper = null;
+      editorCoordinateLabel = null;
+      transformControls = null;
+      transformProxy = null;
+      transformTargetType = "";
+      transformTargetIndex = -1;
+      hemisphereLight = null;
       directionalLight = null;
       runtimePointLights = [];
       loader = null;
@@ -1032,31 +1059,17 @@
       });
       var frame = new THREE.LineLoop(frameGeometry, frameMaterial);
 
-      var pickMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.16, 20, 20),
-        new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.24,
-          depthWrite: false,
-        })
-      );
-      pickMesh.position.set(0, 0, 0.08);
-      pickMesh.userData.helperType = "camera";
-
       var group = new THREE.Group();
       group.add(frame);
-      group.add(pickMesh);
       group.userData.helperType = "camera";
 
       return {
         group: group,
         frame: frame,
-        pick: pickMesh,
       };
     }
 
-    function createPointLightHelper(THREE, index) {
+    function createPointLightHelper(THREE) {
       var group = new THREE.Group();
 
       var ring = new THREE.Mesh(
@@ -1080,17 +1093,12 @@
           depthWrite: false,
         })
       );
-      sphere.userData.helperType = "pointLight";
-      sphere.userData.lightIndex = index;
       group.add(sphere);
-
-      group.userData.helperType = "pointLight";
-      group.userData.lightIndex = index;
 
       return {
         group: group,
         ring: ring,
-        pick: sphere,
+        sphere: sphere,
       };
     }
 
@@ -1108,6 +1116,26 @@
       return helper;
     }
 
+    function ensureSceneAmbientPosition() {
+      if (!sceneConfig.lighting || typeof sceneConfig.lighting !== "object") {
+        sceneConfig.lighting = {};
+      }
+
+      var fallback = { x: 0, y: 2, z: 0 };
+      var current = sceneConfig.lighting.ambientPosition;
+      if (!current || typeof current !== "object") {
+        sceneConfig.lighting.ambientPosition = fallback;
+      } else {
+        sceneConfig.lighting.ambientPosition = {
+          x: getNumber(current.x, fallback.x),
+          y: getNumber(current.y, fallback.y),
+          z: getNumber(current.z, fallback.z),
+        };
+      }
+
+      return sceneConfig.lighting.ambientPosition;
+    }
+
     function syncHelperStyles() {
       if (!editorState.active) {
         return;
@@ -1120,7 +1148,11 @@
       }
 
       if (cameraHelper && cameraHelper.frame && cameraHelper.frame.material) {
-        cameraHelper.frame.material.color.set(activeMode === "camera" ? 0x8ce8ff : 0xc9e7ff);
+        cameraHelper.frame.material.color.set(0xc9e7ff);
+      }
+
+      if (ambientHelper && ambientHelper.material) {
+        ambientHelper.material.color.set(activeMode === "ambient" ? 0xffefb7 : 0xffdc9c);
       }
 
       helperPointLights.forEach(function (entry, index) {
@@ -1138,24 +1170,66 @@
 
       helperGroup = new THREE.Group();
       helperGroup.name = "bs3d-editor-helpers";
-      helperPickTargets = [];
       helperPointLights = [];
+      modelRuntimeTargets = [];
 
       ambientHelper = createAmbientHelper(THREE);
       helperGroup.add(ambientHelper);
 
       cameraHelper = buildCameraFrameHelper(THREE);
       helperGroup.add(cameraHelper.group);
-      helperPickTargets.push(cameraHelper.pick);
+
+      gridHelper = new THREE.GridHelper(20, 20, 0xf3e2ca, 0xf3e2ca);
+      gridHelper.material.transparent = true;
+      gridHelper.material.opacity = 0.15;
+      gridHelper.material.depthWrite = false;
+      helperGroup.add(gridHelper);
+
+      axesHelper = new THREE.AxesHelper(2.2);
+      if (Array.isArray(axesHelper.material)) {
+        axesHelper.material.forEach(function (material) {
+          material.transparent = true;
+          material.opacity = 0.85;
+          material.depthWrite = false;
+        });
+      }
+      helperGroup.add(axesHelper);
+
+      transformProxy = new THREE.Object3D();
+      transformProxy.visible = false;
+      helperGroup.add(transformProxy);
 
       runtimePointLights.forEach(function (_, index) {
-        var helper = createPointLightHelper(THREE, index);
+        var helper = createPointLightHelper(THREE);
         helperPointLights.push(helper);
         helperGroup.add(helper.group);
-        helperPickTargets.push(helper.pick);
       });
 
       scene.add(helperGroup);
+      if (THREE.TransformControls) {
+        transformControls = new THREE.TransformControls(camera, renderer.domElement);
+        transformControls.setMode("translate");
+        transformControls.setSpace("world");
+        transformControls.setTranslationSnap(null);
+        transformControls.visible = false;
+        transformControls.addEventListener("dragging-changed", function (event) {
+          editorState.transformDragging = !!(event && event.value);
+        });
+        transformControls.addEventListener("objectChange", function () {
+          var target = getModeTarget();
+          if (!target || !transformControls || !transformControls.object) {
+            return;
+          }
+
+          setTargetPosition(target, transformControls.object.position);
+          dispatchEditorHelperUpdate(targetToName(target), target.index, transformControls.object.position);
+          updateRuntimeLighting(THREE);
+          syncEditorHelpers(THREE);
+        });
+        scene.add(transformControls);
+      }
+
+      ensureEditorCoordinateLabel();
       syncEditorHelpers(THREE);
       syncHelperStyles();
     }
@@ -1176,9 +1250,10 @@
       }
 
       if (ambientHelper) {
+        var ambientPosition = ensureVector3(THREE, ensureSceneAmbientPosition(), { x: 0, y: 2, z: 0 });
         var ambientVisible = !!(sceneConfig.lighting && sceneConfig.lighting.ambientEnabled !== false);
         ambientHelper.visible = ambientVisible;
-        ambientHelper.position.set(0, 1.35, 0);
+        ambientHelper.position.copy(ambientPosition);
       }
 
       var pointLights = (sceneConfig.lighting && sceneConfig.lighting.pointLights) || [];
@@ -1190,12 +1265,23 @@
         var color = lightConfig.color || "#ffd2ad";
         try {
           helper.ring.material.color.set(color);
-          helper.pick.material.color.set(color);
+          helper.sphere.material.color.set(color);
         } catch (error) {
           helper.ring.material.color.set(0xffb58a);
-          helper.pick.material.color.set(0xffcda5);
+          helper.sphere.material.color.set(0xffcda5);
         }
       });
+
+      modelRuntimeTargets.forEach(function (entry) {
+        if (!entry || !entry.root || !sceneConfig.models || !sceneConfig.models[entry.index]) {
+          return;
+        }
+        var position = sceneConfig.models[entry.index].position || {};
+        entry.root.position.set(getNumber(position.x, 0), getNumber(position.y, 0), getNumber(position.z, 0));
+      });
+
+      syncSpatialAidVisibility();
+      syncTransformTarget(THREE);
     }
 
     function defaultPointLightConfig(index) {
@@ -1266,6 +1352,34 @@
       return sceneConfig.lighting.pointLights;
     }
 
+    function syncSpatialAidVisibility() {
+      if (!editorState.active) {
+        return;
+      }
+      if (gridHelper) {
+        gridHelper.visible = !!editorState.showGrid;
+      }
+      if (axesHelper) {
+        axesHelper.visible = !!editorState.showAxes;
+      }
+      if (editorCoordinateLabel && !editorState.showLabels) {
+        editorCoordinateLabel.style.display = "none";
+      }
+    }
+
+    function ensureEditorCoordinateLabel() {
+      if (!editorState.active || editorCoordinateLabel) {
+        return;
+      }
+
+      editorCoordinateLabel = container.querySelector(".bs3d-editor-xyz-label");
+      if (!editorCoordinateLabel) {
+        editorCoordinateLabel = document.createElement("div");
+        editorCoordinateLabel.className = "bs3d-editor-xyz-label";
+        container.appendChild(editorCoordinateLabel);
+      }
+    }
+
     function syncCameraFromScene() {
       if (!camera) {
         return;
@@ -1286,11 +1400,17 @@
       }
 
       var lighting = sceneConfig.lighting || {};
-      if (ambientLight) {
-        ambientLight.intensity =
+      var ambientPosition = ensureSceneAmbientPosition();
+      if (hemisphereLight) {
+        hemisphereLight.intensity =
           lighting.ambientEnabled === false
             ? 0
             : clamp(getNumber(lighting.ambientIntensity, 0.8), 0, 8);
+        hemisphereLight.position.set(
+          getNumber(ambientPosition.x, 0),
+          getNumber(ambientPosition.y, 2),
+          getNumber(ambientPosition.z, 0)
+        );
       }
 
       if (directionalLight) {
@@ -1340,8 +1460,8 @@
         return null;
       }
 
-      if (editorState.mode === "camera") {
-        return { type: "camera", index: -1 };
+      if (editorState.mode === "ambient") {
+        return { type: "ambient", index: -1 };
       }
 
       if (editorState.mode.indexOf("pointLight") === 0) {
@@ -1351,11 +1471,14 @@
         }
       }
 
-      return null;
-    }
+      if (editorState.mode.indexOf("model") === 0) {
+        var modelIndex = Number(editorState.mode.replace("model", "")) - 1;
+        if (Number.isFinite(modelIndex) && modelIndex >= 0 && modelIndex < 3) {
+          return { type: "model", index: modelIndex };
+        }
+      }
 
-    function sameTarget(a, b) {
-      return !!a && !!b && a.type === b.type && a.index === b.index;
+      return null;
     }
 
     function getTargetPositionVector(THREE, target) {
@@ -1363,13 +1486,19 @@
         return null;
       }
 
-      if (target.type === "camera") {
-        return ensureVector3(THREE, sceneConfig.camera && sceneConfig.camera.position, { x: 0, y: 0, z: 5 });
+      if (target.type === "ambient") {
+        return ensureVector3(THREE, ensureSceneAmbientPosition(), { x: 0, y: 2, z: 0 });
       }
 
-      var pointLights = ensureScenePointLights();
-      if (target.type === "pointLight" && pointLights[target.index]) {
-        return ensureVector3(THREE, pointLights[target.index].position, defaultPointLightConfig(target.index).position);
+      if (target.type === "pointLight") {
+        var pointLights = ensureScenePointLights();
+        if (pointLights[target.index]) {
+          return ensureVector3(THREE, pointLights[target.index].position, defaultPointLightConfig(target.index).position);
+        }
+      }
+
+      if (target.type === "model" && Array.isArray(sceneConfig.models) && sceneConfig.models[target.index]) {
+        return ensureVector3(THREE, sceneConfig.models[target.index].position, { x: 0, y: 0, z: 0 });
       }
 
       return null;
@@ -1380,24 +1509,33 @@
         return;
       }
 
-      if (target.type === "camera") {
-        if (!sceneConfig.camera || typeof sceneConfig.camera !== "object") {
-          sceneConfig.camera = {};
-        }
-        sceneConfig.camera.position = {
+      if (target.type === "ambient") {
+        ensureSceneAmbientPosition();
+        sceneConfig.lighting.ambientPosition = {
           x: getNumber(vector.x, 0),
-          y: getNumber(vector.y, 0),
-          z: getNumber(vector.z, 5),
+          y: getNumber(vector.y, 2),
+          z: getNumber(vector.z, 0),
         };
         return;
       }
 
-      var pointLights = ensureScenePointLights();
-      if (target.type === "pointLight" && pointLights[target.index]) {
-        pointLights[target.index].position = {
+      if (target.type === "pointLight") {
+        var pointLights = ensureScenePointLights();
+        if (pointLights[target.index]) {
+          pointLights[target.index].position = {
+            x: getNumber(vector.x, 0),
+            y: getNumber(vector.y, 3),
+            z: getNumber(vector.z, 3),
+          };
+        }
+        return;
+      }
+
+      if (target.type === "model" && Array.isArray(sceneConfig.models) && sceneConfig.models[target.index]) {
+        sceneConfig.models[target.index].position = {
           x: getNumber(vector.x, 0),
-          y: getNumber(vector.y, 3),
-          z: getNumber(vector.z, 3),
+          y: getNumber(vector.y, 0),
+          z: getNumber(vector.z, 0),
         };
       }
     }
@@ -1406,173 +1544,141 @@
       if (!target) {
         return "";
       }
-      if (target.type === "camera") {
-        return "camera";
+      if (target.type === "ambient") {
+        return "ambient";
       }
-      return "pointLight" + String(target.index + 1);
+      if (target.type === "pointLight") {
+        return "pointLight" + String(target.index + 1);
+      }
+      if (target.type === "model") {
+        return "model" + String(target.index + 1);
+      }
+      return "";
     }
 
-    function pointerToNdc(event) {
-      if (!container || typeof container.getBoundingClientRect !== "function") {
-        return null;
-      }
-      var rect = container.getBoundingClientRect();
-      if (!rect.width || !rect.height) {
-        return null;
-      }
-
-      var x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      var y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-      return { x: x, y: y };
-    }
-
-    function resolvePickedTarget(event) {
-      if (!raycaster || !camera || !helperPickTargets.length) {
-        return null;
-      }
-
-      var ndc = pointerToNdc(event);
-      if (!ndc) {
-        return null;
-      }
-
-      raycaster.setFromCamera(ndc, camera);
-      var intersections = raycaster.intersectObjects(helperPickTargets, false);
-      if (!intersections.length) {
-        return null;
-      }
-
-      var picked = intersections[0].object;
-      if (!picked || !picked.userData) {
-        return null;
-      }
-
-      if (picked.userData.helperType === "camera") {
-        return { type: "camera", index: -1 };
-      }
-
-      if (picked.userData.helperType === "pointLight") {
-        var lightIndex = Number(picked.userData.lightIndex);
-        if (Number.isFinite(lightIndex) && lightIndex >= 0 && lightIndex < 3) {
-          return { type: "pointLight", index: lightIndex };
+    function findModelRuntimeTarget(index) {
+      for (var i = 0; i < modelRuntimeTargets.length; i += 1) {
+        if (modelRuntimeTargets[i].index === index) {
+          return modelRuntimeTargets[i];
         }
+      }
+      return null;
+    }
+
+    function getTargetRuntimeObject(target) {
+      if (!target) {
+        return null;
+      }
+
+      if (target.type === "ambient") {
+        return ambientHelper;
+      }
+
+      if (target.type === "pointLight" && helperPointLights[target.index]) {
+        return helperPointLights[target.index].group;
+      }
+
+      if (target.type === "model") {
+        var modelTarget = findModelRuntimeTarget(target.index);
+        return modelTarget ? modelTarget.root : null;
       }
 
       return null;
     }
 
-    function planeNormalForMode(THREE) {
+    function syncTransformControlPlane() {
+      if (!transformControls) {
+        return;
+      }
+
+      if (typeof transformControls.setDragPlaneName === "function") {
+        transformControls.setDragPlaneName(editorState.plane);
+      }
       if (editorState.plane === "xz") {
-        return new THREE.Vector3(0, 1, 0);
+        transformControls.showX = true;
+        transformControls.showY = false;
+        transformControls.showZ = true;
+      } else if (editorState.plane === "yz") {
+        transformControls.showX = false;
+        transformControls.showY = true;
+        transformControls.showZ = true;
+      } else {
+        transformControls.showX = true;
+        transformControls.showY = true;
+        transformControls.showZ = false;
       }
-      if (editorState.plane === "yz") {
-        return new THREE.Vector3(1, 0, 0);
-      }
-      return new THREE.Vector3(0, 0, 1);
     }
 
-    function stopEditorDrag() {
-      editorState.dragging = false;
-      editorState.draggedType = "";
-      editorState.draggedIndex = -1;
-      editorState.pointerId = null;
-      editorState.dragOffset = null;
-      editorState.dragPlane = null;
+    function syncTransformTarget(THREE) {
+      if (!editorState.active || !transformControls || !transformProxy) {
+        return;
+      }
+
+      syncTransformControlPlane();
+
+      var target = getModeTarget();
+      if (!target) {
+        transformControls.detach();
+        transformControls.visible = false;
+        transformTargetType = "";
+        transformTargetIndex = -1;
+        return;
+      }
+
+      var runtimeObject = getTargetRuntimeObject(target);
+      var position = getTargetPositionVector(THREE, target);
+      if (!runtimeObject || !position) {
+        transformControls.detach();
+        transformControls.visible = false;
+        transformTargetType = "";
+        transformTargetIndex = -1;
+        return;
+      }
+
+      transformTargetType = target.type;
+      transformTargetIndex = target.index;
+      transformProxy.position.copy(position);
+      if (runtimeObject.position) {
+        runtimeObject.position.copy(position);
+      }
+
+      if (transformControls.object !== transformProxy) {
+        transformControls.attach(transformProxy);
+      }
+      transformControls.visible = true;
     }
 
-    function startEditorDrag(THREE, event) {
-      if (!editorState.active || !isEditModeActive() || !raycaster || !camera) {
-        return false;
-      }
-
-      var modeTarget = getModeTarget();
-      if (!modeTarget) {
-        return false;
-      }
-
-      var pickedTarget = resolvePickedTarget(event);
-      if (!sameTarget(modeTarget, pickedTarget)) {
-        return false;
-      }
-
-      var targetPosition = getTargetPositionVector(THREE, modeTarget);
-      if (!targetPosition) {
-        return false;
-      }
-
-      var ndc = pointerToNdc(event);
-      if (!ndc) {
-        return false;
-      }
-
-      var dragPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-        planeNormalForMode(THREE),
-        targetPosition
-      );
-      var intersection = new THREE.Vector3();
-      raycaster.setFromCamera(ndc, camera);
-      if (!raycaster.ray.intersectPlane(dragPlane, intersection)) {
-        return false;
-      }
-
-      editorState.dragging = true;
-      editorState.draggedType = modeTarget.type;
-      editorState.draggedIndex = modeTarget.index;
-      editorState.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
-      editorState.dragOffset = targetPosition.clone().sub(intersection);
-      editorState.dragPlane = dragPlane;
-
-      if (typeof container.setPointerCapture === "function" && typeof event.pointerId === "number") {
-        try {
-          container.setPointerCapture(event.pointerId);
-        } catch (error) {
-          // Ignore capture failures.
+    function updateEditorCoordinateLabel() {
+      if (!editorState.active || !editorCoordinateLabel || !editorState.showLabels || !renderer || !camera) {
+        if (editorCoordinateLabel) {
+          editorCoordinateLabel.style.display = "none";
         }
+        return;
       }
 
-      event.preventDefault();
-      return true;
-    }
-
-    function updateEditorDrag(THREE, event) {
-      if (!editorState.active || !editorState.dragging || !editorState.dragPlane || !raycaster || !camera) {
-        return false;
+      if (!transformControls || !transformControls.object || transformTargetType === "") {
+        editorCoordinateLabel.style.display = "none";
+        return;
       }
 
-      if (
-        editorState.pointerId !== null &&
-        typeof event.pointerId === "number" &&
-        event.pointerId !== editorState.pointerId
-      ) {
-        return false;
+      var position = transformControls.object.position.clone();
+      var projected = position.clone().project(camera);
+      if (projected.z < -1 || projected.z > 1) {
+        editorCoordinateLabel.style.display = "none";
+        return;
       }
 
-      var ndc = pointerToNdc(event);
-      if (!ndc) {
-        return false;
-      }
-
-      var intersection = new THREE.Vector3();
-      raycaster.setFromCamera(ndc, camera);
-      if (!raycaster.ray.intersectPlane(editorState.dragPlane, intersection)) {
-        return false;
-      }
-
-      if (editorState.dragOffset) {
-        intersection.add(editorState.dragOffset);
-      }
-
-      var activeTarget = {
-        type: editorState.draggedType,
-        index: editorState.draggedIndex,
-      };
-      setTargetPosition(activeTarget, intersection);
-      syncCameraFromScene();
-      updateRuntimeLighting(THREE);
-
-      dispatchEditorHelperUpdate(targetToName(activeTarget), activeTarget.index, intersection);
-      event.preventDefault();
-      return true;
+      var canvasRect = renderer.domElement.getBoundingClientRect();
+      var x = ((projected.x + 1) / 2) * canvasRect.width;
+      var y = ((-projected.y + 1) / 2) * canvasRect.height;
+      editorCoordinateLabel.style.left = Math.round(x) + "px";
+      editorCoordinateLabel.style.top = Math.round(y) + "px";
+      editorCoordinateLabel.style.display = "block";
+      editorCoordinateLabel.textContent =
+        targetToName({ type: transformTargetType, index: transformTargetIndex }) +
+        "  X:" + (Math.round(position.x * 100) / 100).toFixed(2) +
+        "  Y:" + (Math.round(position.y * 100) / 100).toFixed(2) +
+        "  Z:" + (Math.round(position.z * 100) / 100).toFixed(2);
     }
 
     function setupScene() {
@@ -1688,15 +1794,14 @@
       scene.add(rootGroup);
 
       var lighting = sceneConfig.lighting || {};
-      ambientLight = new THREE.AmbientLight(0xffffff, 0);
-      scene.add(ambientLight);
+      hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x1d2434, 0);
+      scene.add(hemisphereLight);
 
       directionalLight = new THREE.DirectionalLight(0xffffff, 0);
       scene.add(directionalLight);
 
       runtimePointLights = [];
       var pointLights = ensureScenePointLights();
-      raycaster = new THREE.Raycaster();
 
       pointLights.forEach(function (pointLightConfig, index) {
         var entry = pointLightConfig && typeof pointLightConfig === "object" ? pointLightConfig : {};
@@ -1734,7 +1839,8 @@
           return;
         }
 
-        updateEditorState(detail.editMode, detail.dragPlane);
+        updateEditorState(detail.editMode, detail.dragPlane, detail.showGrid, detail.showAxes, detail.showLabels);
+        syncEditorHelpers(THREE);
         syncHelperStyles();
       };
       window.addEventListener("bs3d:editor-bridge", editorBridgeHandler);
@@ -1802,6 +1908,13 @@
 
             applyModelTransform(root, model);
             rootGroup.add(root);
+            if (editorState.active) {
+              modelRuntimeTargets.push({
+                index: index,
+                root: root,
+              });
+              syncEditorHelpers(window.THREE);
+            }
             state.modelsLoaded += 1;
             state.drawCallEstimate += estimateDrawCalls(root);
             updateOverlay();
@@ -2055,8 +2168,6 @@
         return;
       }
 
-      var THREE = window.THREE;
-
       pointerEnterHandler = function () {
         if (isEditModeActive()) {
           return;
@@ -2074,10 +2185,6 @@
       };
 
       pointerLeaveHandler = function () {
-        if (editorState.dragging) {
-          stopEditorDrag();
-        }
-
         state.pointerX = 0;
         state.pointerY = 0;
         state.targetRotationX = 0;
@@ -2101,10 +2208,7 @@
       };
 
       pointerMoveHandler = function (event) {
-        if (isEditModeActive()) {
-          if (THREE && updateEditorDrag(THREE, event)) {
-            return;
-          }
+        if (isEditModeActive() || editorState.transformDragging) {
           return;
         }
 
@@ -2124,48 +2228,8 @@
         state.pointerY = clamp(y * 2 - 1, -1, 1);
       };
 
-      pointerDownHandler = function (event) {
-        if (!isEditModeActive() || !THREE) {
-          return;
-        }
-
-        startEditorDrag(THREE, event);
-      };
-
-      pointerUpHandler = function (event) {
-        if (!editorState.dragging) {
-          return;
-        }
-
-        if (
-          editorState.pointerId !== null &&
-          typeof event.pointerId === "number" &&
-          event.pointerId !== editorState.pointerId
-        ) {
-          return;
-        }
-
-        if (typeof container.releasePointerCapture === "function" && typeof event.pointerId === "number") {
-          try {
-            container.releasePointerCapture(event.pointerId);
-          } catch (error) {
-            // Ignore capture release failures.
-          }
-        }
-
-        stopEditorDrag();
-      };
-
-      pointerCancelHandler = function () {
-        stopEditorDrag();
-      };
-
       container.addEventListener("pointerenter", pointerEnterHandler);
       container.addEventListener("pointerleave", pointerLeaveHandler);
-      container.addEventListener("pointerdown", pointerDownHandler);
-      container.addEventListener("pointerup", pointerUpHandler);
-      container.addEventListener("pointercancel", pointerCancelHandler);
-      container.addEventListener("lostpointercapture", pointerCancelHandler);
       container.addEventListener("pointermove", pointerMoveHandler);
     }
 
@@ -2239,6 +2303,7 @@
 
       updateInteractions();
       renderer.render(scene, camera);
+      updateEditorCoordinateLabel();
 
       state.frames += 1;
       updateFpsBucket(now);

@@ -632,3 +632,42 @@ Checkpoint storage policy note (effective 2026-02-09):
 - `next_actions`:
 - Run live WP test pass for drag editing (`camera`, `pointLight1-3`) across XY/XZ/YZ modes.
 - Confirm schema v2 persistence through Save, Template Apply, Version Restore, and Import/Export roundtrip.
+
+---
+
+## Entry 023
+- `checkpoint_id`: 20260210-122522-ambient-gizmo-grid-model-drag-v1
+- `date_utc`: 2026-02-10T12:25:22Z
+- `request`: Replace camera drag workflow with ambient-focused gizmo controls, add admin preview spatial overlays (grid/axes/selected XYZ label), and keep live drag updates without preview blink/re-bootstrap.
+- `decision`: Upgraded scene schema to v3 by adding `lighting.ambientPosition`, migrated runtime ambient contribution to `THREE.HemisphereLight`, and wired admin-preview `TransformControls` for editable targets (`ambient`, `pointLight1-3`, `model1-3`) with XY/XZ/YZ plane constraints. Added non-persistent overlay toggles (grid/axes/XYZ label), kept camera frame helper as non-draggable visual guide, and retained frontend purity by gating helpers to `admin-preview` only. Composer bridge and meta-box fields were extended so drag updates write draft form coordinates directly without forcing full preview re-bootstrap loops.
+- `compact_context`:
+- `stable_checkpoint`: `20260209-111549-qa-and-release-docs`
+- `branch_policy`: `beta-updates` remains the active implementation branch.
+- `next_phase_objective`: Live WordPress validation for ambient/model/light gizmo UX, overlay toggles, and persistence roundtrip through save/template/version/import-export.
+- `acceptance_gate`: Ambient/point/model gizmo dragging must update coordinates in real-time with no helper meshes visible on public Elementor/shortcode surfaces.
+- `files`:
+- `beastside-3d-hero-banner/assets/vendor/three/TransformControls.js`
+- `beastside-3d-hero-banner/assets/vendor/VENDOR_SOURCES.md`
+- `beastside-3d-hero-banner/includes/class-bs3d-renderer.php`
+- `beastside-3d-hero-banner/includes/class-bs3d-banner-post-type.php`
+- `beastside-3d-hero-banner/assets/js/admin-composer.js`
+- `beastside-3d-hero-banner/assets/js/frontend.js`
+- `beastside-3d-hero-banner/assets/css/admin.css`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-122522-ambient-gizmo-grid-model-drag-v1/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-122522-ambient-gizmo-grid-model-drag-v1/restore.md`
+- `risks`:
+- `php -l` is unavailable in this environment, so PHP syntax verification is static inspection only.
+- The bundled `TransformControls.js` compatibility shim may require minor live-scene sensitivity tuning based on user camera position and dense model overlap.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- `node --check beastside-3d-hero-banner/assets/js/admin-composer.js`: pass.
+- `node --check beastside-3d-hero-banner/assets/vendor/three/TransformControls.js`: pass.
+- Static verification confirms edit target set now includes `ambient`, `pointLight1-3`, and `model1-3`, and excludes camera drag.
+- Static verification confirms grid/axes/XYZ label toggles are bridge-wired and default ON for admin preview.
+- `next_actions`:
+- Run live drag QA for `ambient`, `pointLight1-3`, and `model1-3` across XY/XZ/YZ planes.
+- Validate overlay toggles (grid/axes/label) and confirm no helper visuals render on published Elementor/shortcode pages.

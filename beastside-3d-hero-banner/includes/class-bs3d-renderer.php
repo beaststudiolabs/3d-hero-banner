@@ -51,6 +51,12 @@ class BS3D_Renderer {
 			$has_meshopt    = true;
 		}
 
+		if ( file_exists( BS3D_PLUGIN_DIR . 'assets/vendor/three/TransformControls.js' ) ) {
+			$transform_deps = $has_three ? array( 'bs3d-three' ) : array();
+			wp_register_script( 'bs3d-transform-controls', BS3D_PLUGIN_URL . 'assets/vendor/three/TransformControls.js', $transform_deps, BS3D_VERSION, true );
+			$dependencies[] = 'bs3d-transform-controls';
+		}
+
 		if ( file_exists( BS3D_PLUGIN_DIR . 'assets/vendor/three/GLTFLoader.js' ) ) {
 			$gltf_deps = $has_three ? array( 'bs3d-three' ) : array();
 			if ( $has_draco ) {

@@ -11,6 +11,9 @@
   var editorBridgeState = {
     editMode: "none",
     dragPlane: "xy",
+    showGrid: true,
+    showAxes: true,
+    showLabels: true,
   };
 
   function getField(name) {
@@ -63,7 +66,16 @@
 
   function normalizeEditMode(value) {
     var mode = String(value || "none");
-    var allowed = ["none", "camera", "pointLight1", "pointLight2", "pointLight3"];
+    var allowed = [
+      "none",
+      "ambient",
+      "pointLight1",
+      "pointLight2",
+      "pointLight3",
+      "model1",
+      "model2",
+      "model3",
+    ];
     return allowed.indexOf(mode) > -1 ? mode : "none";
   }
 
@@ -135,7 +147,7 @@
 
   function collectSceneConfig() {
     return {
-      sceneSchemaVersion: 2,
+      sceneSchemaVersion: 3,
       models: collectModels(),
       background: {
         mode: String(getValue("bs3d_background_mode", "static") || "static"),
@@ -154,6 +166,11 @@
       lighting: {
         ambientEnabled: getBoolean("bs3d_ambient_enabled", true),
         ambientIntensity: getNumber("bs3d_ambient_intensity", 0.8),
+        ambientPosition: {
+          x: getNumber("bs3d_ambient_x", 0),
+          y: getNumber("bs3d_ambient_y", 2),
+          z: getNumber("bs3d_ambient_z", 0),
+        },
         directionalIntensity: getNumber("bs3d_directional_intensity", 1.15),
         directionalPosition: {
           x: getNumber("bs3d_light_x", 5),
@@ -252,6 +269,9 @@
 
     previewBanner.setAttribute("data-bs3d-edit-mode", editorBridgeState.editMode);
     previewBanner.setAttribute("data-bs3d-drag-plane", editorBridgeState.dragPlane);
+    previewBanner.setAttribute("data-bs3d-show-grid", editorBridgeState.showGrid ? "1" : "0");
+    previewBanner.setAttribute("data-bs3d-show-axes", editorBridgeState.showAxes ? "1" : "0");
+    previewBanner.setAttribute("data-bs3d-show-labels", editorBridgeState.showLabels ? "1" : "0");
 
     window.dispatchEvent(
       new CustomEvent("bs3d:editor-bridge", {
@@ -259,6 +279,9 @@
           container: previewBanner,
           editMode: editorBridgeState.editMode,
           dragPlane: editorBridgeState.dragPlane,
+          showGrid: editorBridgeState.showGrid,
+          showAxes: editorBridgeState.showAxes,
+          showLabels: editorBridgeState.showLabels,
         },
       })
     );
@@ -269,6 +292,9 @@
 
     var activePlane = root.querySelector('input[name="bs3d_admin_drag_plane"]:checked');
     editorBridgeState.dragPlane = normalizeDragPlane(activePlane ? activePlane.value : "xy");
+    editorBridgeState.showGrid = getBoolean("bs3d_admin_show_grid", true);
+    editorBridgeState.showAxes = getBoolean("bs3d_admin_show_axes", true);
+    editorBridgeState.showLabels = getBoolean("bs3d_admin_show_labels", true);
 
     dispatchEditorBridge();
   }
@@ -291,6 +317,9 @@
     payload.overlayEnabled = true;
     payload.editorMode = editorBridgeState.editMode;
     payload.dragPlane = editorBridgeState.dragPlane;
+    payload.editorShowGrid = editorBridgeState.showGrid;
+    payload.editorShowAxes = editorBridgeState.showAxes;
+    payload.editorShowLabels = editorBridgeState.showLabels;
 
     previewBanner.setAttribute("data-bs3d", JSON.stringify(payload));
     previewBanner.classList.toggle("bs3d-fullscreen", viewportMode === "fullscreen");
@@ -386,10 +415,10 @@
       }
 
       var position = detail.position;
-      if (detail.target === "camera") {
-        setNumberField("bs3d_camera_x", position.x);
-        setNumberField("bs3d_camera_y", position.y);
-        setNumberField("bs3d_camera_z", position.z);
+      if (detail.target === "ambient") {
+        setNumberField("bs3d_ambient_x", position.x);
+        setNumberField("bs3d_ambient_y", position.y);
+        setNumberField("bs3d_ambient_z", position.z);
       } else if (detail.target && detail.target.indexOf("pointLight") === 0) {
         var index = Number(String(detail.target).replace("pointLight", "")) - 1;
         if (Number.isFinite(index) && index >= 0 && index <= 2) {
@@ -397,6 +426,14 @@
           setNumberField(prefix + "[x]", position.x);
           setNumberField(prefix + "[y]", position.y);
           setNumberField(prefix + "[z]", position.z);
+        }
+      } else if (detail.target && detail.target.indexOf("model") === 0) {
+        var modelIndex = Number(String(detail.target).replace("model", "")) - 1;
+        if (Number.isFinite(modelIndex) && modelIndex >= 0 && modelIndex <= 2) {
+          var modelPrefix = "bs3d_models[" + modelIndex + "][position]";
+          setNumberField(modelPrefix + "[x]", position.x);
+          setNumberField(modelPrefix + "[y]", position.y);
+          setNumberField(modelPrefix + "[z]", position.z);
         }
       }
 
@@ -412,7 +449,10 @@
 
         if (
           field.name === "bs3d_admin_edit_mode" ||
-          field.name === "bs3d_admin_drag_plane"
+          field.name === "bs3d_admin_drag_plane" ||
+          field.name === "bs3d_admin_show_grid" ||
+          field.name === "bs3d_admin_show_axes" ||
+          field.name === "bs3d_admin_show_labels"
         ) {
           syncEditorBridgeFromControls();
           return;
@@ -426,7 +466,10 @@
 
         if (
           field.name === "bs3d_admin_edit_mode" ||
-          field.name === "bs3d_admin_drag_plane"
+          field.name === "bs3d_admin_drag_plane" ||
+          field.name === "bs3d_admin_show_grid" ||
+          field.name === "bs3d_admin_show_axes" ||
+          field.name === "bs3d_admin_show_labels"
         ) {
           syncEditorBridgeFromControls();
           return;

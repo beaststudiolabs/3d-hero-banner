@@ -65,7 +65,7 @@ class BS3D_Banner_Post_Type {
 	 */
 	public static function default_scene_config() {
 		return array(
-			'sceneSchemaVersion' => 2,
+			'sceneSchemaVersion' => 3,
 			'models'             => array(),
 			'background'         => array(
 				'mode'         => 'static',
@@ -80,6 +80,7 @@ class BS3D_Banner_Post_Type {
 			'lighting'           => array(
 				'ambientEnabled'      => true,
 				'ambientIntensity'     => 0.8,
+				'ambientPosition'      => array( 'x' => 0, 'y' => 2, 'z' => 0 ),
 				'directionalIntensity' => 1.15,
 				'directionalPosition'  => array( 'x' => 5, 'y' => 10, 'z' => 7 ),
 				'shadows'              => true,
@@ -110,7 +111,7 @@ class BS3D_Banner_Post_Type {
 		$scene    = is_array( $scene ) ? $scene : array();
 
 		$output                     = $defaults;
-		$output['sceneSchemaVersion'] = 2;
+		$output['sceneSchemaVersion'] = 3;
 
 		$models = array();
 		if ( ! empty( $scene['models'] ) && is_array( $scene['models'] ) ) {
@@ -187,6 +188,11 @@ class BS3D_Banner_Post_Type {
 		$output['lighting'] = array(
 			'ambientEnabled'      => self::to_bool( $lighting['ambientEnabled'] ?? true ),
 			'ambientIntensity'     => self::to_float( $lighting['ambientIntensity'] ?? 0.8, 0, 5, 0.8 ),
+			'ambientPosition'      => array(
+				'x' => self::to_float( $lighting['ambientPosition']['x'] ?? 0, -1000, 1000, 0 ),
+				'y' => self::to_float( $lighting['ambientPosition']['y'] ?? 2, -1000, 1000, 2 ),
+				'z' => self::to_float( $lighting['ambientPosition']['z'] ?? 0, -1000, 1000, 0 ),
+			),
 			'directionalIntensity' => self::to_float( $lighting['directionalIntensity'] ?? 1.15, 0, 8, 1.15 ),
 			'directionalPosition'  => array(
 				'x' => self::to_float( $lighting['directionalPosition']['x'] ?? 5, -1000, 1000, 5 ),
@@ -284,10 +290,13 @@ class BS3D_Banner_Post_Type {
 								<label for="bs3d_admin_edit_mode"><?php esc_html_e( 'Edit Mode', 'beastside-3d-hero-banner' ); ?></label>
 								<select id="bs3d_admin_edit_mode" name="bs3d_admin_edit_mode" data-bs3d-control="edit-mode">
 									<option value="none"><?php esc_html_e( 'None', 'beastside-3d-hero-banner' ); ?></option>
-									<option value="camera"><?php esc_html_e( 'Camera', 'beastside-3d-hero-banner' ); ?></option>
+									<option value="ambient"><?php esc_html_e( 'Ambient', 'beastside-3d-hero-banner' ); ?></option>
 									<option value="pointLight1"><?php esc_html_e( 'Point Light 1', 'beastside-3d-hero-banner' ); ?></option>
 									<option value="pointLight2"><?php esc_html_e( 'Point Light 2', 'beastside-3d-hero-banner' ); ?></option>
 									<option value="pointLight3"><?php esc_html_e( 'Point Light 3', 'beastside-3d-hero-banner' ); ?></option>
+									<option value="model1"><?php esc_html_e( 'Model 1', 'beastside-3d-hero-banner' ); ?></option>
+									<option value="model2"><?php esc_html_e( 'Model 2', 'beastside-3d-hero-banner' ); ?></option>
+									<option value="model3"><?php esc_html_e( 'Model 3', 'beastside-3d-hero-banner' ); ?></option>
 								</select>
 							</div>
 							<div class="bs3d-toolbar-group">
@@ -298,6 +307,14 @@ class BS3D_Banner_Post_Type {
 									<label><input type="radio" name="bs3d_admin_drag_plane" value="yz" data-bs3d-control="drag-plane" /> YZ</label>
 								</div>
 							</div>
+							<div class="bs3d-toolbar-group">
+								<span><?php esc_html_e( 'Overlays', 'beastside-3d-hero-banner' ); ?></span>
+								<div class="bs3d-plane-switches">
+									<label><input type="checkbox" name="bs3d_admin_show_grid" value="1" data-bs3d-control="show-grid" checked /> <?php esc_html_e( 'Grid', 'beastside-3d-hero-banner' ); ?></label>
+									<label><input type="checkbox" name="bs3d_admin_show_axes" value="1" data-bs3d-control="show-axes" checked /> <?php esc_html_e( 'Axes', 'beastside-3d-hero-banner' ); ?></label>
+									<label><input type="checkbox" name="bs3d_admin_show_labels" value="1" data-bs3d-control="show-labels" checked /> <?php esc_html_e( 'XYZ Label', 'beastside-3d-hero-banner' ); ?></label>
+								</div>
+							</div>
 						</div>
 						<h3><?php esc_html_e( 'Live Preview', 'beastside-3d-hero-banner' ); ?></h3>
 						<div class="bs3d-banner bs3d-admin-preview-banner" data-bs3d="<?php echo esc_attr( wp_json_encode( $preview_payload ) ); ?>">
@@ -306,7 +323,7 @@ class BS3D_Banner_Post_Type {
 								<img class="bs3d-poster" src="<?php echo esc_url( $poster_url ); ?>" alt="" loading="lazy" />
 							<?php endif; ?>
 						</div>
-						<p class="description"><?php esc_html_e( 'Drag helpers in Edit Mode to place camera/lights. Preview updates from draft changes in real-time. Data is persisted only when you click Update/Publish.', 'beastside-3d-hero-banner' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Drag helpers in Edit Mode to place ambient/light/model targets. Preview updates from draft changes in real-time. Data is persisted only when you click Update/Publish.', 'beastside-3d-hero-banner' ); ?></p>
 					</div>
 					<div class="bs3d-composer-side-panel">
 						<div class="bs3d-section-card">
@@ -331,6 +348,11 @@ class BS3D_Banner_Post_Type {
 								<div><label><input type="checkbox" name="bs3d_ambient_enabled" value="1" <?php checked( ! empty( $scene_data['lighting']['ambientEnabled'] ) ); ?> /> <?php esc_html_e( 'Ambient Enabled', 'beastside-3d-hero-banner' ); ?></label></div>
 								<div><label><?php esc_html_e( 'Ambient Intensity', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.01" min="0" max="5" name="bs3d_ambient_intensity" value="<?php echo esc_attr( (string) $scene_data['lighting']['ambientIntensity'] ); ?>" /></div>
 								<div><label><?php esc_html_e( 'Directional Intensity', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.01" min="0" max="8" name="bs3d_directional_intensity" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalIntensity'] ); ?>" /></div>
+							</div>
+							<div class="bs3d-three-col">
+								<div><label><?php esc_html_e( 'Ambient X', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_ambient_x" value="<?php echo esc_attr( (string) $scene_data['lighting']['ambientPosition']['x'] ); ?>" /></div>
+								<div><label><?php esc_html_e( 'Ambient Y', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_ambient_y" value="<?php echo esc_attr( (string) $scene_data['lighting']['ambientPosition']['y'] ); ?>" /></div>
+								<div><label><?php esc_html_e( 'Ambient Z', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_ambient_z" value="<?php echo esc_attr( (string) $scene_data['lighting']['ambientPosition']['z'] ); ?>" /></div>
 							</div>
 							<div class="bs3d-three-col">
 								<div><label><?php esc_html_e( 'Dir X', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_light_x" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalPosition']['x'] ); ?>" /></div>
@@ -732,6 +754,11 @@ class BS3D_Banner_Post_Type {
 		$scene['lighting'] = array(
 			'ambientEnabled'      => ! empty( $_POST['bs3d_ambient_enabled'] ),
 			'ambientIntensity'     => isset( $_POST['bs3d_ambient_intensity'] ) ? wp_unslash( $_POST['bs3d_ambient_intensity'] ) : 0.8,
+			'ambientPosition'      => array(
+				'x' => isset( $_POST['bs3d_ambient_x'] ) ? wp_unslash( $_POST['bs3d_ambient_x'] ) : 0,
+				'y' => isset( $_POST['bs3d_ambient_y'] ) ? wp_unslash( $_POST['bs3d_ambient_y'] ) : 2,
+				'z' => isset( $_POST['bs3d_ambient_z'] ) ? wp_unslash( $_POST['bs3d_ambient_z'] ) : 0,
+			),
 			'directionalIntensity' => isset( $_POST['bs3d_directional_intensity'] ) ? wp_unslash( $_POST['bs3d_directional_intensity'] ) : 1.15,
 			'directionalPosition'  => array(
 				'x' => isset( $_POST['bs3d_light_x'] ) ? wp_unslash( $_POST['bs3d_light_x'] ) : 5,

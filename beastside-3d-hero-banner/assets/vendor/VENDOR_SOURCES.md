@@ -10,6 +10,7 @@ All runtime assets in this directory are vendored so plugin install can run in o
 - Download endpoints used:
 - `https://unpkg.com/three@0.146.0/build/three.min.js`
 - `https://unpkg.com/three@0.146.0/examples/js/loaders/GLTFLoader.js`
+- `https://github.com/mrdoob/three.js/blob/r146/examples/js/controls/TransformControls.js`
 - `https://raw.githubusercontent.com/mrdoob/three.js/r146/LICENSE`
 
 ## Draco Decoder
