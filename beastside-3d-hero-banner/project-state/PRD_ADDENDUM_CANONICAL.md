@@ -221,6 +221,7 @@ This document is the canonical source of approved requirements and acceptance cr
 23. Admin UI surfaces (Settings, Diagnostics, Banner Composer) support a modern glass/bubble presentation layer while preserving existing control behavior and data flow.
 24. Admin UI v2 styling uses a dark glass palette with always-visible control outlines, a 30/70 Composer layout split on desktop (responsive stack on smaller screens), and viewport-smart Live Preview sizing while preserving existing workflows.
 25. Admin visual updates must be cache-busted on delivery so updated CSS/JS appears immediately after plugin update/install.
+26. Admin Composer and all plugin admin screens maintain readable text and visible idle control outlines under dark theme styling, including Composer token scope and placeholder legibility.
 
 ## Non-Negotiable Defaults
 - Debug mode defaults ON.
@@ -302,3 +303,4 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260210-061745-admin-ui-bubble-refresh-v1 | 2026-02-10T06:17:45Z | Applied admin-first modern bubble/glass visual refresh to Settings, Diagnostics, and Composer with scoped markup shells and responsive styling. |
 | 20260210-082110-admin-dark-30-70-layout-v2 | 2026-02-10T08:21:10Z | Applied admin dark-glass v2 refinements: warm palette tokens, stronger default control outlines, 30/70 Composer split, viewport-smart Live Preview sizing, and Data Transfer shell/panel parity. |
 | 20260210-085621-admin-cache-bust-hotfix | 2026-02-10T08:56:21Z | Added filemtime-based admin asset cache-busting and bumped plugin version to 0.2.6 so new admin visuals reliably appear after update/install. |
+| 20260210-092423-admin-legibility-rebalance-v2 | 2026-02-10T09:24:23Z | Fixed dark-theme legibility by hardening Composer token scope, rebalancing neutral contrast, adding fallback-safe color vars, and explicit placeholder styling; bumped version to 0.2.7. |

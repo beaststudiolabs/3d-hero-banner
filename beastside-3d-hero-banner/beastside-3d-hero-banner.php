@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Beastside 3D Hero Banner
  * Description: 3D hero banner plugin with diagnostics, debug overlay, Elementor widget, and shortcode support.
- * Version: 0.2.6
+ * Version: 0.2.7
  * Author: Beastside
  * Text Domain: beastside-3d-hero-banner
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BS3D_VERSION', '0.2.6' );
+define( 'BS3D_VERSION', '0.2.7' );
 define( 'BS3D_PLUGIN_FILE', __FILE__ );
 define( 'BS3D_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BS3D_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

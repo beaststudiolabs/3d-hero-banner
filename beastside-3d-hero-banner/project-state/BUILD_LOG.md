@@ -565,3 +565,35 @@ Checkpoint storage policy note (effective 2026-02-09):
 - `next_actions`:
 - Install/update plugin build containing `0.2.6`.
 - Hard refresh WP admin and confirm dark v2 styles and 30/70 Composer layout are active.
+
+---
+
+## Entry 021
+- `checkpoint_id`: 20260210-092423-admin-legibility-rebalance-v2
+- `date_utc`: 2026-02-10T09:24:23Z
+- `request`: Fix unreadable admin text and low-contrast controls while preserving the dark glass direction and warm palette styling across all plugin admin screens.
+- `decision`: Applied token-scope hardening by defining the full design token block on both `.bs3d-admin-wrap` and `#bs3d-composer-root`, rebalanced neutrals to a readable balanced-dark palette, added fallback values on critical `var(...)` color/border usages, and added explicit placeholder color styling for form controls. Kept 30/70 Composer layout and responsive behavior unchanged. Bumped plugin version to `0.2.7` for reliable admin asset cache-bust delivery.
+- `compact_context`:
+- `stable_checkpoint`: `20260209-111549-qa-and-release-docs`
+- `branch_policy`: `beta-updates` continues as active branch.
+- `next_phase_objective`: User visual QA for legibility and palette satisfaction, then proceed with queued feature additions.
+- `acceptance_gate`: Readability confirmed on Composer/Settings/Diagnostics/Data Transfer with visible idle outlines and legible text before focus.
+- `files`:
+- `beastside-3d-hero-banner/assets/css/admin.css`
+- `beastside-3d-hero-banner/beastside-3d-hero-banner.php`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-092423-admin-legibility-rebalance-v2/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-092423-admin-legibility-rebalance-v2/restore.md`
+- `risks`:
+- Third-party WP admin overrides could still alter contrast in isolated selectors.
+- If stale plugin zip is used, old CSS can still appear despite improvements.
+- `validation`:
+- Static verification confirms tokens now exist on both `.bs3d-admin-wrap` and `#bs3d-composer-root`.
+- Static verification confirms fallback-aware text/border color usage and explicit placeholder styling.
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass (runtime unchanged in this phase).
+- `next_actions`:
+- Install/update `0.2.7` build and hard-refresh admin.
+- Confirm readability and palette satisfaction with screenshot pass before next feature phase.
