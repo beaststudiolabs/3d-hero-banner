@@ -78,6 +78,31 @@
     return (getNumber(value, 0) * Math.PI) / 180;
   }
 
+  var LENS_MM_OPTIONS = [8, 16, 24, 35, 50, 70, 85, 100, 120, 150, 180, 200];
+  var FULL_FRAME_SENSOR_HEIGHT_MM = 24;
+
+  function getNearestLensMm(value) {
+    var lens = getNumber(value, 35);
+    var nearest = LENS_MM_OPTIONS[0];
+    var delta = Math.abs(nearest - lens);
+
+    LENS_MM_OPTIONS.forEach(function (candidate) {
+      var nextDelta = Math.abs(candidate - lens);
+      if (nextDelta < delta) {
+        nearest = candidate;
+        delta = nextDelta;
+      }
+    });
+
+    return nearest;
+  }
+
+  function lensToVerticalFov(lensMm) {
+    var safeLens = Math.max(1, getNearestLensMm(lensMm));
+    var radians = 2 * Math.atan(FULL_FRAME_SENSOR_HEIGHT_MM / (2 * safeLens));
+    return clamp((radians * 180) / Math.PI, 10, 130);
+  }
+
   function getScene(payload) {
     if (payload && payload.scene && typeof payload.scene === "object") {
       return payload.scene;
@@ -507,6 +532,15 @@
     var camera = null;
     var renderer = null;
     var rootGroup = null;
+    var helperGroup = null;
+    var helperPickTargets = [];
+    var helperPointLights = [];
+    var ambientHelper = null;
+    var cameraHelper = null;
+    var raycaster = null;
+    var ambientLight = null;
+    var directionalLight = null;
+    var runtimePointLights = [];
     var loader = null;
     var dracoLoader = null;
     var animationFrameId = 0;
@@ -516,6 +550,10 @@
     var pointerMoveHandler = null;
     var pointerEnterHandler = null;
     var pointerLeaveHandler = null;
+    var pointerDownHandler = null;
+    var pointerUpHandler = null;
+    var pointerCancelHandler = null;
+    var editorBridgeHandler = null;
     var timeoutHandle = 0;
     var intersectionObserver = null;
     var disposed = false;
@@ -562,6 +600,18 @@
       currentParallaxY: 0,
     };
 
+    var editorState = {
+      active: payload.surface === "admin-preview",
+      mode: "none",
+      plane: "xy",
+      dragging: false,
+      draggedType: "",
+      draggedIndex: -1,
+      pointerId: null,
+      dragOffset: null,
+      dragPlane: null,
+    };
+
     var overlay = ensureOverlay(container, payload);
 
     function updateOverlay() {
@@ -592,6 +642,80 @@
       }
 
       overlay.textContent = lines.join("\n");
+    }
+
+    function normalizeEditorMode(value) {
+      var mode = String(value || "none");
+      if (
+        mode !== "none" &&
+        mode !== "camera" &&
+        mode !== "pointLight1" &&
+        mode !== "pointLight2" &&
+        mode !== "pointLight3"
+      ) {
+        return "none";
+      }
+      return mode;
+    }
+
+    function normalizeEditorPlane(value) {
+      var plane = String(value || "xy").toLowerCase();
+      if (plane !== "xy" && plane !== "xz" && plane !== "yz") {
+        plane = "xy";
+      }
+      return plane;
+    }
+
+    function updateEditorState(mode, plane) {
+      editorState.mode = normalizeEditorMode(mode);
+      editorState.plane = normalizeEditorPlane(plane);
+
+      if (!editorState.active) {
+        editorState.mode = "none";
+      }
+
+      if (editorState.mode === "none") {
+        stopEditorDrag();
+      }
+    }
+
+    function readEditorStateFromContainer() {
+      if (!editorState.active) {
+        updateEditorState("none", "xy");
+        return;
+      }
+
+      var payloadMode = payload.editorMode || payload.editMode;
+      var payloadPlane = payload.dragPlane;
+      var attrMode = container.getAttribute("data-bs3d-edit-mode");
+      var attrPlane = container.getAttribute("data-bs3d-drag-plane");
+
+      updateEditorState(attrMode || payloadMode || "none", attrPlane || payloadPlane || "xy");
+    }
+
+    function isEditModeActive() {
+      return editorState.active && editorState.mode !== "none";
+    }
+
+    function dispatchEditorHelperUpdate(target, index, vector) {
+      if (!editorState.active || !vector) {
+        return;
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("bs3d:editor-helper-update", {
+          detail: {
+            container: container,
+            target: target,
+            index: index,
+            position: {
+              x: Math.round(getNumber(vector.x, 0) * 1000) / 1000,
+              y: Math.round(getNumber(vector.y, 0) * 1000) / 1000,
+              z: Math.round(getNumber(vector.z, 0) * 1000) / 1000,
+            },
+          },
+        })
+      );
     }
 
     function setLastIssue(issue) {
@@ -736,6 +860,22 @@
         pointerMoveHandler = null;
       }
 
+      if (pointerDownHandler) {
+        container.removeEventListener("pointerdown", pointerDownHandler);
+        pointerDownHandler = null;
+      }
+
+      if (pointerUpHandler) {
+        container.removeEventListener("pointerup", pointerUpHandler);
+        pointerUpHandler = null;
+      }
+
+      if (pointerCancelHandler) {
+        container.removeEventListener("pointercancel", pointerCancelHandler);
+        container.removeEventListener("lostpointercapture", pointerCancelHandler);
+        pointerCancelHandler = null;
+      }
+
       if (pointerEnterHandler) {
         container.removeEventListener("pointerenter", pointerEnterHandler);
         pointerEnterHandler = null;
@@ -745,6 +885,13 @@
         container.removeEventListener("pointerleave", pointerLeaveHandler);
         pointerLeaveHandler = null;
       }
+
+      if (editorBridgeHandler) {
+        window.removeEventListener("bs3d:editor-bridge", editorBridgeHandler);
+        editorBridgeHandler = null;
+      }
+
+      stopEditorDrag();
 
       if (scene) {
         disposeObject3D(scene);
@@ -763,6 +910,15 @@
       camera = null;
       renderer = null;
       rootGroup = null;
+      helperGroup = null;
+      helperPickTargets = [];
+      helperPointLights = [];
+      ambientHelper = null;
+      cameraHelper = null;
+      raycaster = null;
+      ambientLight = null;
+      directionalLight = null;
+      runtimePointLights = [];
       loader = null;
       dracoLoader = null;
     }
@@ -851,6 +1007,572 @@
           node.material.needsUpdate = true;
         }
       });
+    }
+
+    function ensureVector3(THREE, value, fallback) {
+      return new THREE.Vector3(
+        getNumber(value && value.x, fallback.x),
+        getNumber(value && value.y, fallback.y),
+        getNumber(value && value.z, fallback.z)
+      );
+    }
+
+    function buildCameraFrameHelper(THREE) {
+      var frameGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-0.75, 0.42, 0),
+        new THREE.Vector3(0.75, 0.42, 0),
+        new THREE.Vector3(0.75, -0.42, 0),
+        new THREE.Vector3(-0.75, -0.42, 0),
+      ]);
+      var frameMaterial = new THREE.LineBasicMaterial({
+        color: 0xc9e7ff,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+      });
+      var frame = new THREE.LineLoop(frameGeometry, frameMaterial);
+
+      var pickMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 20, 20),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.24,
+          depthWrite: false,
+        })
+      );
+      pickMesh.position.set(0, 0, 0.08);
+      pickMesh.userData.helperType = "camera";
+
+      var group = new THREE.Group();
+      group.add(frame);
+      group.add(pickMesh);
+      group.userData.helperType = "camera";
+
+      return {
+        group: group,
+        frame: frame,
+        pick: pickMesh,
+      };
+    }
+
+    function createPointLightHelper(THREE, index) {
+      var group = new THREE.Group();
+
+      var ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.24, 0.016, 10, 30),
+        new THREE.MeshBasicMaterial({
+          color: 0xffb58a,
+          transparent: true,
+          opacity: 0.6,
+          depthWrite: false,
+        })
+      );
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+
+      var sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 20, 20),
+        new THREE.MeshBasicMaterial({
+          color: 0xffcda5,
+          transparent: true,
+          opacity: 0.26,
+          depthWrite: false,
+        })
+      );
+      sphere.userData.helperType = "pointLight";
+      sphere.userData.lightIndex = index;
+      group.add(sphere);
+
+      group.userData.helperType = "pointLight";
+      group.userData.lightIndex = index;
+
+      return {
+        group: group,
+        ring: ring,
+        pick: sphere,
+      };
+    }
+
+    function createAmbientHelper(THREE) {
+      var helper = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2, 20, 20),
+        new THREE.MeshBasicMaterial({
+          color: 0xffdc9c,
+          transparent: true,
+          opacity: 0.22,
+          depthWrite: false,
+        })
+      );
+      helper.userData.helperType = "ambient";
+      return helper;
+    }
+
+    function syncHelperStyles() {
+      if (!editorState.active) {
+        return;
+      }
+
+      var activeMode = editorState.mode;
+      var activePointIndex = -1;
+      if (activeMode.indexOf("pointLight") === 0) {
+        activePointIndex = Number(activeMode.replace("pointLight", "")) - 1;
+      }
+
+      if (cameraHelper && cameraHelper.frame && cameraHelper.frame.material) {
+        cameraHelper.frame.material.color.set(activeMode === "camera" ? 0x8ce8ff : 0xc9e7ff);
+      }
+
+      helperPointLights.forEach(function (entry, index) {
+        if (!entry || !entry.ring || !entry.ring.material) {
+          return;
+        }
+        entry.ring.material.color.set(activePointIndex === index ? 0x99f6d5 : 0xffb58a);
+      });
+    }
+
+    function createEditorHelpers(THREE) {
+      if (!editorState.active || !scene) {
+        return;
+      }
+
+      helperGroup = new THREE.Group();
+      helperGroup.name = "bs3d-editor-helpers";
+      helperPickTargets = [];
+      helperPointLights = [];
+
+      ambientHelper = createAmbientHelper(THREE);
+      helperGroup.add(ambientHelper);
+
+      cameraHelper = buildCameraFrameHelper(THREE);
+      helperGroup.add(cameraHelper.group);
+      helperPickTargets.push(cameraHelper.pick);
+
+      runtimePointLights.forEach(function (_, index) {
+        var helper = createPointLightHelper(THREE, index);
+        helperPointLights.push(helper);
+        helperGroup.add(helper.group);
+        helperPickTargets.push(helper.pick);
+      });
+
+      scene.add(helperGroup);
+      syncEditorHelpers(THREE);
+      syncHelperStyles();
+    }
+
+    function syncEditorHelpers(THREE) {
+      if (!editorState.active) {
+        return;
+      }
+
+      var cameraPosition = ensureVector3(
+        THREE,
+        sceneConfig.camera && sceneConfig.camera.position,
+        { x: 0, y: 0, z: 5 }
+      );
+      if (cameraHelper && cameraHelper.group) {
+        cameraHelper.group.position.copy(cameraPosition);
+        cameraHelper.group.lookAt(new THREE.Vector3(0, 0, 0));
+      }
+
+      if (ambientHelper) {
+        var ambientVisible = !!(sceneConfig.lighting && sceneConfig.lighting.ambientEnabled !== false);
+        ambientHelper.visible = ambientVisible;
+        ambientHelper.position.set(0, 1.35, 0);
+      }
+
+      var pointLights = (sceneConfig.lighting && sceneConfig.lighting.pointLights) || [];
+      helperPointLights.forEach(function (helper, index) {
+        var lightConfig = pointLights[index] || {};
+        var position = ensureVector3(THREE, lightConfig.position, { x: 0, y: 3, z: 3 });
+        helper.group.position.copy(position);
+        helper.group.visible = !!lightConfig.enabled;
+        var color = lightConfig.color || "#ffd2ad";
+        try {
+          helper.ring.material.color.set(color);
+          helper.pick.material.color.set(color);
+        } catch (error) {
+          helper.ring.material.color.set(0xffb58a);
+          helper.pick.material.color.set(0xffcda5);
+        }
+      });
+    }
+
+    function defaultPointLightConfig(index) {
+      if (index === 1) {
+        return {
+          enabled: false,
+          color: "#f7b3ff",
+          intensity: 2.2,
+          distance: 20,
+          decay: 2,
+          position: { x: 0, y: 3, z: 2 },
+        };
+      }
+
+      if (index === 2) {
+        return {
+          enabled: false,
+          color: "#a8e6ff",
+          intensity: 2.2,
+          distance: 20,
+          decay: 2,
+          position: { x: 2, y: 3, z: 3 },
+        };
+      }
+
+      return {
+        enabled: false,
+        color: "#ffd2ad",
+        intensity: 2.5,
+        distance: 20,
+        decay: 2,
+        position: { x: -2, y: 3, z: 3 },
+      };
+    }
+
+    function ensureScenePointLights() {
+      if (!sceneConfig.lighting || typeof sceneConfig.lighting !== "object") {
+        sceneConfig.lighting = {};
+      }
+
+      if (!Array.isArray(sceneConfig.lighting.pointLights)) {
+        sceneConfig.lighting.pointLights = [];
+      }
+
+      for (var index = 0; index < 3; index += 1) {
+        var fallback = defaultPointLightConfig(index);
+        var entry = sceneConfig.lighting.pointLights[index];
+        if (!entry || typeof entry !== "object") {
+          sceneConfig.lighting.pointLights[index] = fallback;
+          continue;
+        }
+
+        sceneConfig.lighting.pointLights[index] = {
+          enabled: entry.enabled === true || entry.enabled === 1 || entry.enabled === "1" || entry.enabled === "true",
+          color: typeof entry.color === "string" && entry.color ? entry.color : fallback.color,
+          intensity: clamp(getNumber(entry.intensity, fallback.intensity), 0, 20),
+          distance: clamp(getNumber(entry.distance, fallback.distance), 0, 200),
+          decay: clamp(getNumber(entry.decay, fallback.decay), 0, 4),
+          position: {
+            x: getNumber(entry.position && entry.position.x, fallback.position.x),
+            y: getNumber(entry.position && entry.position.y, fallback.position.y),
+            z: getNumber(entry.position && entry.position.z, fallback.position.z),
+          },
+        };
+      }
+
+      sceneConfig.lighting.pointLights = sceneConfig.lighting.pointLights.slice(0, 3);
+      return sceneConfig.lighting.pointLights;
+    }
+
+    function syncCameraFromScene() {
+      if (!camera) {
+        return;
+      }
+
+      var cameraPosition = sceneConfig.camera && sceneConfig.camera.position ? sceneConfig.camera.position : {};
+      camera.position.set(
+        getNumber(cameraPosition.x, 0),
+        getNumber(cameraPosition.y, 0),
+        getNumber(cameraPosition.z, 5)
+      );
+      camera.lookAt(0, 0, 0);
+    }
+
+    function updateRuntimeLighting(THREE) {
+      if (!scene || !THREE) {
+        return;
+      }
+
+      var lighting = sceneConfig.lighting || {};
+      if (ambientLight) {
+        ambientLight.intensity =
+          lighting.ambientEnabled === false
+            ? 0
+            : clamp(getNumber(lighting.ambientIntensity, 0.8), 0, 8);
+      }
+
+      if (directionalLight) {
+        var directionalPos = lighting.directionalPosition || {};
+        directionalLight.intensity = clamp(getNumber(lighting.directionalIntensity, 1.15), 0, 12);
+        directionalLight.position.set(
+          getNumber(directionalPos.x, 5),
+          getNumber(directionalPos.y, 10),
+          getNumber(directionalPos.z, 7)
+        );
+        directionalLight.castShadow = !!lighting.shadows;
+      }
+
+      var pointLights = ensureScenePointLights();
+      runtimePointLights.forEach(function (entry, index) {
+        if (!entry || !entry.light) {
+          return;
+        }
+
+        var fallback = defaultPointLightConfig(index);
+        var lightConfig = pointLights[index] || fallback;
+
+        try {
+          entry.light.color.set(lightConfig.color || fallback.color);
+        } catch (error) {
+          entry.light.color.set(fallback.color);
+        }
+
+        entry.light.intensity = clamp(getNumber(lightConfig.intensity, fallback.intensity), 0, 20);
+        entry.light.distance = clamp(getNumber(lightConfig.distance, fallback.distance), 0, 200);
+        entry.light.decay = clamp(getNumber(lightConfig.decay, fallback.decay), 0, 4);
+        entry.light.position.set(
+          getNumber(lightConfig.position && lightConfig.position.x, fallback.position.x),
+          getNumber(lightConfig.position && lightConfig.position.y, fallback.position.y),
+          getNumber(lightConfig.position && lightConfig.position.z, fallback.position.z)
+        );
+        entry.light.visible = !!lightConfig.enabled;
+        entry.light.castShadow = !!lighting.shadows;
+      });
+
+      syncEditorHelpers(THREE);
+      syncHelperStyles();
+    }
+
+    function getModeTarget() {
+      if (!editorState.active || editorState.mode === "none") {
+        return null;
+      }
+
+      if (editorState.mode === "camera") {
+        return { type: "camera", index: -1 };
+      }
+
+      if (editorState.mode.indexOf("pointLight") === 0) {
+        var pointIndex = Number(editorState.mode.replace("pointLight", "")) - 1;
+        if (Number.isFinite(pointIndex) && pointIndex >= 0 && pointIndex < 3) {
+          return { type: "pointLight", index: pointIndex };
+        }
+      }
+
+      return null;
+    }
+
+    function sameTarget(a, b) {
+      return !!a && !!b && a.type === b.type && a.index === b.index;
+    }
+
+    function getTargetPositionVector(THREE, target) {
+      if (!target) {
+        return null;
+      }
+
+      if (target.type === "camera") {
+        return ensureVector3(THREE, sceneConfig.camera && sceneConfig.camera.position, { x: 0, y: 0, z: 5 });
+      }
+
+      var pointLights = ensureScenePointLights();
+      if (target.type === "pointLight" && pointLights[target.index]) {
+        return ensureVector3(THREE, pointLights[target.index].position, defaultPointLightConfig(target.index).position);
+      }
+
+      return null;
+    }
+
+    function setTargetPosition(target, vector) {
+      if (!target || !vector) {
+        return;
+      }
+
+      if (target.type === "camera") {
+        if (!sceneConfig.camera || typeof sceneConfig.camera !== "object") {
+          sceneConfig.camera = {};
+        }
+        sceneConfig.camera.position = {
+          x: getNumber(vector.x, 0),
+          y: getNumber(vector.y, 0),
+          z: getNumber(vector.z, 5),
+        };
+        return;
+      }
+
+      var pointLights = ensureScenePointLights();
+      if (target.type === "pointLight" && pointLights[target.index]) {
+        pointLights[target.index].position = {
+          x: getNumber(vector.x, 0),
+          y: getNumber(vector.y, 3),
+          z: getNumber(vector.z, 3),
+        };
+      }
+    }
+
+    function targetToName(target) {
+      if (!target) {
+        return "";
+      }
+      if (target.type === "camera") {
+        return "camera";
+      }
+      return "pointLight" + String(target.index + 1);
+    }
+
+    function pointerToNdc(event) {
+      if (!container || typeof container.getBoundingClientRect !== "function") {
+        return null;
+      }
+      var rect = container.getBoundingClientRect();
+      if (!rect.width || !rect.height) {
+        return null;
+      }
+
+      var x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      var y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+      return { x: x, y: y };
+    }
+
+    function resolvePickedTarget(event) {
+      if (!raycaster || !camera || !helperPickTargets.length) {
+        return null;
+      }
+
+      var ndc = pointerToNdc(event);
+      if (!ndc) {
+        return null;
+      }
+
+      raycaster.setFromCamera(ndc, camera);
+      var intersections = raycaster.intersectObjects(helperPickTargets, false);
+      if (!intersections.length) {
+        return null;
+      }
+
+      var picked = intersections[0].object;
+      if (!picked || !picked.userData) {
+        return null;
+      }
+
+      if (picked.userData.helperType === "camera") {
+        return { type: "camera", index: -1 };
+      }
+
+      if (picked.userData.helperType === "pointLight") {
+        var lightIndex = Number(picked.userData.lightIndex);
+        if (Number.isFinite(lightIndex) && lightIndex >= 0 && lightIndex < 3) {
+          return { type: "pointLight", index: lightIndex };
+        }
+      }
+
+      return null;
+    }
+
+    function planeNormalForMode(THREE) {
+      if (editorState.plane === "xz") {
+        return new THREE.Vector3(0, 1, 0);
+      }
+      if (editorState.plane === "yz") {
+        return new THREE.Vector3(1, 0, 0);
+      }
+      return new THREE.Vector3(0, 0, 1);
+    }
+
+    function stopEditorDrag() {
+      editorState.dragging = false;
+      editorState.draggedType = "";
+      editorState.draggedIndex = -1;
+      editorState.pointerId = null;
+      editorState.dragOffset = null;
+      editorState.dragPlane = null;
+    }
+
+    function startEditorDrag(THREE, event) {
+      if (!editorState.active || !isEditModeActive() || !raycaster || !camera) {
+        return false;
+      }
+
+      var modeTarget = getModeTarget();
+      if (!modeTarget) {
+        return false;
+      }
+
+      var pickedTarget = resolvePickedTarget(event);
+      if (!sameTarget(modeTarget, pickedTarget)) {
+        return false;
+      }
+
+      var targetPosition = getTargetPositionVector(THREE, modeTarget);
+      if (!targetPosition) {
+        return false;
+      }
+
+      var ndc = pointerToNdc(event);
+      if (!ndc) {
+        return false;
+      }
+
+      var dragPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+        planeNormalForMode(THREE),
+        targetPosition
+      );
+      var intersection = new THREE.Vector3();
+      raycaster.setFromCamera(ndc, camera);
+      if (!raycaster.ray.intersectPlane(dragPlane, intersection)) {
+        return false;
+      }
+
+      editorState.dragging = true;
+      editorState.draggedType = modeTarget.type;
+      editorState.draggedIndex = modeTarget.index;
+      editorState.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+      editorState.dragOffset = targetPosition.clone().sub(intersection);
+      editorState.dragPlane = dragPlane;
+
+      if (typeof container.setPointerCapture === "function" && typeof event.pointerId === "number") {
+        try {
+          container.setPointerCapture(event.pointerId);
+        } catch (error) {
+          // Ignore capture failures.
+        }
+      }
+
+      event.preventDefault();
+      return true;
+    }
+
+    function updateEditorDrag(THREE, event) {
+      if (!editorState.active || !editorState.dragging || !editorState.dragPlane || !raycaster || !camera) {
+        return false;
+      }
+
+      if (
+        editorState.pointerId !== null &&
+        typeof event.pointerId === "number" &&
+        event.pointerId !== editorState.pointerId
+      ) {
+        return false;
+      }
+
+      var ndc = pointerToNdc(event);
+      if (!ndc) {
+        return false;
+      }
+
+      var intersection = new THREE.Vector3();
+      raycaster.setFromCamera(ndc, camera);
+      if (!raycaster.ray.intersectPlane(editorState.dragPlane, intersection)) {
+        return false;
+      }
+
+      if (editorState.dragOffset) {
+        intersection.add(editorState.dragOffset);
+      }
+
+      var activeTarget = {
+        type: editorState.draggedType,
+        index: editorState.draggedIndex,
+      };
+      setTargetPosition(activeTarget, intersection);
+      syncCameraFromScene();
+      updateRuntimeLighting(THREE);
+
+      dispatchEditorHelperUpdate(targetToName(activeTarget), activeTarget.index, intersection);
+      event.preventDefault();
+      return true;
     }
 
     function setupScene() {
@@ -946,9 +1668,11 @@
 
       var cameraConfig = sceneConfig.camera || {};
       var cameraPosition = cameraConfig.position || {};
+      var cameraLens = getNearestLensMm(cameraConfig.lensMm);
+      var cameraFov = lensToVerticalFov(cameraLens);
 
       camera = new THREE.PerspectiveCamera(
-        clamp(getNumber(cameraConfig.fov, 45), 20, 100),
+        cameraFov,
         width / height,
         0.1,
         2000
@@ -964,18 +1688,56 @@
       scene.add(rootGroup);
 
       var lighting = sceneConfig.lighting || {};
-      var ambient = new THREE.AmbientLight(0xffffff, clamp(getNumber(lighting.ambientIntensity, 0.8), 0, 8));
-      scene.add(ambient);
+      ambientLight = new THREE.AmbientLight(0xffffff, 0);
+      scene.add(ambientLight);
 
-      var directional = new THREE.DirectionalLight(0xffffff, clamp(getNumber(lighting.directionalIntensity, 1.15), 0, 12));
-      var directionalPos = lighting.directionalPosition || {};
-      directional.position.set(
-        getNumber(directionalPos.x, 5),
-        getNumber(directionalPos.y, 10),
-        getNumber(directionalPos.z, 7)
-      );
-      directional.castShadow = !!lighting.shadows;
-      scene.add(directional);
+      directionalLight = new THREE.DirectionalLight(0xffffff, 0);
+      scene.add(directionalLight);
+
+      runtimePointLights = [];
+      var pointLights = ensureScenePointLights();
+      raycaster = new THREE.Raycaster();
+
+      pointLights.forEach(function (pointLightConfig, index) {
+        var entry = pointLightConfig && typeof pointLightConfig === "object" ? pointLightConfig : {};
+        var fallbackLight = defaultPointLightConfig(index);
+        var colorValue = entry.color || fallbackLight.color;
+        var pointLight = new THREE.PointLight(
+          colorValue,
+          clamp(getNumber(entry.intensity, fallbackLight.intensity), 0, 20),
+          clamp(getNumber(entry.distance, fallbackLight.distance), 0, 200),
+          clamp(getNumber(entry.decay, fallbackLight.decay), 0, 4)
+        );
+        var lightPosition = entry.position || {};
+        pointLight.position.set(
+          getNumber(lightPosition.x, fallbackLight.position.x),
+          getNumber(lightPosition.y, fallbackLight.position.y),
+          getNumber(lightPosition.z, fallbackLight.position.z)
+        );
+        pointLight.visible = !!entry.enabled;
+        pointLight.castShadow = !!lighting.shadows;
+        scene.add(pointLight);
+
+        runtimePointLights.push({
+          light: pointLight,
+          index: index,
+        });
+      });
+
+      readEditorStateFromContainer();
+      updateRuntimeLighting(THREE);
+      createEditorHelpers(THREE);
+
+      editorBridgeHandler = function (event) {
+        var detail = event && event.detail ? event.detail : null;
+        if (!detail || detail.container !== container) {
+          return;
+        }
+
+        updateEditorState(detail.editMode, detail.dragPlane);
+        syncHelperStyles();
+      };
+      window.addEventListener("bs3d:editor-bridge", editorBridgeHandler);
 
       var hasDraco = !!(THREE.DRACOLoader && context.dracoConfigured);
       var hasMeshopt = !!(context.meshoptConfigured && window[context.meshoptGlobalKey || "MeshoptDecoder"]);
@@ -1293,7 +2055,13 @@
         return;
       }
 
+      var THREE = window.THREE;
+
       pointerEnterHandler = function () {
+        if (isEditModeActive()) {
+          return;
+        }
+
         dispatchEvent("bs3d.interaction_start", {
           bannerId: payload.bannerId || 0,
           slug: payload.slug || "",
@@ -1306,12 +2074,20 @@
       };
 
       pointerLeaveHandler = function () {
+        if (editorState.dragging) {
+          stopEditorDrag();
+        }
+
         state.pointerX = 0;
         state.pointerY = 0;
         state.targetRotationX = 0;
         state.targetRotationY = 0;
         state.targetParallaxX = 0;
         state.targetParallaxY = 0;
+
+        if (isEditModeActive()) {
+          return;
+        }
 
         dispatchEvent("bs3d.interaction_end", {
           bannerId: payload.bannerId || 0,
@@ -1325,6 +2101,13 @@
       };
 
       pointerMoveHandler = function (event) {
+        if (isEditModeActive()) {
+          if (THREE && updateEditorDrag(THREE, event)) {
+            return;
+          }
+          return;
+        }
+
         if (!container.getBoundingClientRect) {
           return;
         }
@@ -1341,13 +2124,68 @@
         state.pointerY = clamp(y * 2 - 1, -1, 1);
       };
 
+      pointerDownHandler = function (event) {
+        if (!isEditModeActive() || !THREE) {
+          return;
+        }
+
+        startEditorDrag(THREE, event);
+      };
+
+      pointerUpHandler = function (event) {
+        if (!editorState.dragging) {
+          return;
+        }
+
+        if (
+          editorState.pointerId !== null &&
+          typeof event.pointerId === "number" &&
+          event.pointerId !== editorState.pointerId
+        ) {
+          return;
+        }
+
+        if (typeof container.releasePointerCapture === "function" && typeof event.pointerId === "number") {
+          try {
+            container.releasePointerCapture(event.pointerId);
+          } catch (error) {
+            // Ignore capture release failures.
+          }
+        }
+
+        stopEditorDrag();
+      };
+
+      pointerCancelHandler = function () {
+        stopEditorDrag();
+      };
+
       container.addEventListener("pointerenter", pointerEnterHandler);
       container.addEventListener("pointerleave", pointerLeaveHandler);
+      container.addEventListener("pointerdown", pointerDownHandler);
+      container.addEventListener("pointerup", pointerUpHandler);
+      container.addEventListener("pointercancel", pointerCancelHandler);
+      container.addEventListener("lostpointercapture", pointerCancelHandler);
       container.addEventListener("pointermove", pointerMoveHandler);
     }
 
     function updateInteractions() {
       if (!rootGroup || !camera || deviceScale <= 0) {
+        return;
+      }
+
+      if (isEditModeActive()) {
+        state.targetRotationX = 0;
+        state.targetRotationY = 0;
+        state.targetParallaxX = 0;
+        state.targetParallaxY = 0;
+
+        state.currentRotationX += (0 - state.currentRotationX) * 0.15;
+        state.currentRotationY += (0 - state.currentRotationY) * 0.15;
+        rootGroup.rotation.x = state.currentRotationX;
+        rootGroup.rotation.y = state.currentRotationY;
+
+        syncCameraFromScene();
         return;
       }
 

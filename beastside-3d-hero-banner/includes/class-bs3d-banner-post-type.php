@@ -65,7 +65,7 @@ class BS3D_Banner_Post_Type {
 	 */
 	public static function default_scene_config() {
 		return array(
-			'sceneSchemaVersion' => 1,
+			'sceneSchemaVersion' => 2,
 			'models'             => array(),
 			'background'         => array(
 				'mode'         => 'static',
@@ -74,14 +74,16 @@ class BS3D_Banner_Post_Type {
 				'dioramaDepth' => 8,
 			),
 			'camera'             => array(
-				'fov'      => 45,
+				'lensMm'   => 35,
 				'position' => array( 'x' => 0, 'y' => 0, 'z' => 5 ),
 			),
 			'lighting'           => array(
+				'ambientEnabled'      => true,
 				'ambientIntensity'     => 0.8,
 				'directionalIntensity' => 1.15,
 				'directionalPosition'  => array( 'x' => 5, 'y' => 10, 'z' => 7 ),
 				'shadows'              => true,
+				'pointLights'          => self::default_point_lights(),
 			),
 			'interactions'       => array(
 				'tilt'          => true,
@@ -108,7 +110,7 @@ class BS3D_Banner_Post_Type {
 		$scene    = is_array( $scene ) ? $scene : array();
 
 		$output                     = $defaults;
-		$output['sceneSchemaVersion'] = 1;
+		$output['sceneSchemaVersion'] = 2;
 
 		$models = array();
 		if ( ! empty( $scene['models'] ) && is_array( $scene['models'] ) ) {
@@ -163,8 +165,12 @@ class BS3D_Banner_Post_Type {
 		);
 
 		$camera = isset( $scene['camera'] ) && is_array( $scene['camera'] ) ? $scene['camera'] : array();
+		$legacy_fov = self::to_float( $camera['fov'] ?? 45, 20, 100, 45 );
+		$lens_mm = isset( $camera['lensMm'] )
+			? self::sanitize_lens_mm( $camera['lensMm'] )
+			: self::lens_from_fov( $legacy_fov );
 		$output['camera'] = array(
-			'fov'      => self::to_float( $camera['fov'] ?? 45, 20, 100, 45 ),
+			'lensMm'   => $lens_mm,
 			'position' => array(
 				'x' => self::to_float( $camera['position']['x'] ?? 0, -1000, 1000, 0 ),
 				'y' => self::to_float( $camera['position']['y'] ?? 0, -1000, 1000, 0 ),
@@ -173,7 +179,13 @@ class BS3D_Banner_Post_Type {
 		);
 
 		$lighting = isset( $scene['lighting'] ) && is_array( $scene['lighting'] ) ? $scene['lighting'] : array();
+		$point_lights_input = isset( $lighting['pointLights'] ) && is_array( $lighting['pointLights'] ) ? $lighting['pointLights'] : array();
+		$point_lights = self::default_point_lights();
+		for ( $index = 0; $index < 3; $index++ ) {
+			$point_lights[ $index ] = self::sanitize_point_light( $point_lights_input[ $index ] ?? $point_lights[ $index ], $point_lights[ $index ] );
+		}
 		$output['lighting'] = array(
+			'ambientEnabled'      => self::to_bool( $lighting['ambientEnabled'] ?? true ),
 			'ambientIntensity'     => self::to_float( $lighting['ambientIntensity'] ?? 0.8, 0, 5, 0.8 ),
 			'directionalIntensity' => self::to_float( $lighting['directionalIntensity'] ?? 1.15, 0, 8, 1.15 ),
 			'directionalPosition'  => array(
@@ -182,6 +194,7 @@ class BS3D_Banner_Post_Type {
 				'z' => self::to_float( $lighting['directionalPosition']['z'] ?? 7, -1000, 1000, 7 ),
 			),
 			'shadows'              => self::to_bool( $lighting['shadows'] ?? true ),
+			'pointLights'          => $point_lights,
 		);
 
 		$interactions = isset( $scene['interactions'] ) && is_array( $scene['interactions'] ) ? $scene['interactions'] : array();
@@ -255,13 +268,108 @@ class BS3D_Banner_Post_Type {
 			admin_url( 'admin-post.php?action=bs3d_duplicate_banner&banner_id=' . $post->ID ),
 			'bs3d_duplicate_banner_' . $post->ID
 		);
+		$lens_options = self::lens_options();
+		$point_lights = isset( $scene_data['lighting']['pointLights'] ) && is_array( $scene_data['lighting']['pointLights'] )
+			? $scene_data['lighting']['pointLights']
+			: self::default_point_lights();
 		?>
 		<div id="bs3d-composer-root" class="bs3d-composer-root">
 			<input type="hidden" id="bs3d_scene_config" name="bs3d_scene_config" value="<?php echo esc_attr( wp_json_encode( $scene_data ) ); ?>" />
 
 			<div class="bs3d-composer-grid">
-				<div class="bs3d-composer-main">
+				<div class="bs3d-composer-row bs3d-composer-row-top">
+					<div class="bs3d-composer-preview bs3d-composer-preview-main">
+						<div class="bs3d-preview-toolbar">
+							<div class="bs3d-toolbar-group">
+								<label for="bs3d_admin_edit_mode"><?php esc_html_e( 'Edit Mode', 'beastside-3d-hero-banner' ); ?></label>
+								<select id="bs3d_admin_edit_mode" name="bs3d_admin_edit_mode" data-bs3d-control="edit-mode">
+									<option value="none"><?php esc_html_e( 'None', 'beastside-3d-hero-banner' ); ?></option>
+									<option value="camera"><?php esc_html_e( 'Camera', 'beastside-3d-hero-banner' ); ?></option>
+									<option value="pointLight1"><?php esc_html_e( 'Point Light 1', 'beastside-3d-hero-banner' ); ?></option>
+									<option value="pointLight2"><?php esc_html_e( 'Point Light 2', 'beastside-3d-hero-banner' ); ?></option>
+									<option value="pointLight3"><?php esc_html_e( 'Point Light 3', 'beastside-3d-hero-banner' ); ?></option>
+								</select>
+							</div>
+							<div class="bs3d-toolbar-group">
+								<span><?php esc_html_e( 'Drag Plane', 'beastside-3d-hero-banner' ); ?></span>
+								<div class="bs3d-plane-switches">
+									<label><input type="radio" name="bs3d_admin_drag_plane" value="xy" data-bs3d-control="drag-plane" checked /> XY</label>
+									<label><input type="radio" name="bs3d_admin_drag_plane" value="xz" data-bs3d-control="drag-plane" /> XZ</label>
+									<label><input type="radio" name="bs3d_admin_drag_plane" value="yz" data-bs3d-control="drag-plane" /> YZ</label>
+								</div>
+							</div>
+						</div>
+						<h3><?php esc_html_e( 'Live Preview', 'beastside-3d-hero-banner' ); ?></h3>
+						<div class="bs3d-banner bs3d-admin-preview-banner" data-bs3d="<?php echo esc_attr( wp_json_encode( $preview_payload ) ); ?>">
+							<div class="bs3d-stage" aria-hidden="true"></div>
+							<?php if ( ! empty( $poster_url ) ) : ?>
+								<img class="bs3d-poster" src="<?php echo esc_url( $poster_url ); ?>" alt="" loading="lazy" />
+							<?php endif; ?>
+						</div>
+						<p class="description"><?php esc_html_e( 'Drag helpers in Edit Mode to place camera/lights. Preview updates from draft changes in real-time. Data is persisted only when you click Update/Publish.', 'beastside-3d-hero-banner' ); ?></p>
+					</div>
+					<div class="bs3d-composer-side-panel">
+						<div class="bs3d-section-card">
+							<h3><?php esc_html_e( 'Camera', 'beastside-3d-hero-banner' ); ?></h3>
+							<div class="bs3d-three-col">
+								<div>
+									<label for="bs3d_camera_lens_mm"><?php esc_html_e( 'Lens', 'beastside-3d-hero-banner' ); ?></label>
+									<select id="bs3d_camera_lens_mm" name="bs3d_camera_lens_mm">
+										<?php foreach ( $lens_options as $lens_mm ) : ?>
+											<option value="<?php echo esc_attr( (string) $lens_mm ); ?>" <?php selected( (int) $lens_mm, (int) $scene_data['camera']['lensMm'] ); ?>><?php echo esc_html( (string) $lens_mm . 'mm' ); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</div>
+								<div><label><?php esc_html_e( 'Camera X', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_camera_x" value="<?php echo esc_attr( (string) $scene_data['camera']['position']['x'] ); ?>" /></div>
+								<div><label><?php esc_html_e( 'Camera Y', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_camera_y" value="<?php echo esc_attr( (string) $scene_data['camera']['position']['y'] ); ?>" /></div>
+							</div>
+							<p><label><?php esc_html_e( 'Camera Z', 'beastside-3d-hero-banner' ); ?></label> <input type="number" step="0.1" min="0.1" name="bs3d_camera_z" value="<?php echo esc_attr( (string) $scene_data['camera']['position']['z'] ); ?>" /></p>
+						</div>
+						<div class="bs3d-section-card">
+							<h3><?php esc_html_e( 'Lighting', 'beastside-3d-hero-banner' ); ?></h3>
+							<div class="bs3d-three-col">
+								<div><label><input type="checkbox" name="bs3d_ambient_enabled" value="1" <?php checked( ! empty( $scene_data['lighting']['ambientEnabled'] ) ); ?> /> <?php esc_html_e( 'Ambient Enabled', 'beastside-3d-hero-banner' ); ?></label></div>
+								<div><label><?php esc_html_e( 'Ambient Intensity', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.01" min="0" max="5" name="bs3d_ambient_intensity" value="<?php echo esc_attr( (string) $scene_data['lighting']['ambientIntensity'] ); ?>" /></div>
+								<div><label><?php esc_html_e( 'Directional Intensity', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.01" min="0" max="8" name="bs3d_directional_intensity" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalIntensity'] ); ?>" /></div>
+							</div>
+							<div class="bs3d-three-col">
+								<div><label><?php esc_html_e( 'Dir X', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_light_x" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalPosition']['x'] ); ?>" /></div>
+								<div><label><?php esc_html_e( 'Dir Y', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_light_y" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalPosition']['y'] ); ?>" /></div>
+								<div><label><?php esc_html_e( 'Dir Z', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_light_z" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalPosition']['z'] ); ?>" /></div>
+							</div>
+							<div class="bs3d-checkbox-row">
+								<label><input type="checkbox" name="bs3d_light_shadows" value="1" <?php checked( ! empty( $scene_data['lighting']['shadows'] ) ); ?> /> <?php esc_html_e( 'Enable Shadows', 'beastside-3d-hero-banner' ); ?></label>
+							</div>
+						</div>
+						<div class="bs3d-section-card">
+							<h3><?php esc_html_e( 'Point Lights (Up to 3)', 'beastside-3d-hero-banner' ); ?></h3>
+							<?php for ( $light_index = 0; $light_index < 3; $light_index++ ) : ?>
+								<?php $point_light = isset( $point_lights[ $light_index ] ) && is_array( $point_lights[ $light_index ] ) ? $point_lights[ $light_index ] : self::default_point_lights()[ $light_index ]; ?>
+								<div class="bs3d-point-light-card">
+									<h4><?php echo esc_html( sprintf( __( 'Point Light %d', 'beastside-3d-hero-banner' ), $light_index + 1 ) ); ?></h4>
+									<div class="bs3d-three-col">
+										<div><label><input type="checkbox" name="bs3d_point_lights[<?php echo esc_attr( (string) $light_index ); ?>][enabled]" value="1" <?php checked( ! empty( $point_light['enabled'] ) ); ?> /> <?php esc_html_e( 'Enabled', 'beastside-3d-hero-banner' ); ?></label></div>
+										<div><label><?php esc_html_e( 'Color', 'beastside-3d-hero-banner' ); ?></label><input type="color" name="bs3d_point_lights[<?php echo esc_attr( (string) $light_index ); ?>][color]" value="<?php echo esc_attr( (string) ( $point_light['color'] ?? '#ffd2ad' ) ); ?>" /></div>
+										<div><label><?php esc_html_e( 'Intensity', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.01" min="0" max="20" name="bs3d_point_lights[<?php echo esc_attr( (string) $light_index ); ?>][intensity]" value="<?php echo esc_attr( (string) ( $point_light['intensity'] ?? 2.5 ) ); ?>" /></div>
+									</div>
+									<div class="bs3d-three-col">
+										<div><label><?php esc_html_e( 'Distance', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" min="0" max="200" name="bs3d_point_lights[<?php echo esc_attr( (string) $light_index ); ?>][distance]" value="<?php echo esc_attr( (string) ( $point_light['distance'] ?? 20 ) ); ?>" /></div>
+										<div><label><?php esc_html_e( 'Decay', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" min="0" max="4" name="bs3d_point_lights[<?php echo esc_attr( (string) $light_index ); ?>][decay]" value="<?php echo esc_attr( (string) ( $point_light['decay'] ?? 2 ) ); ?>" /></div>
+										<div></div>
+									</div>
+									<div class="bs3d-three-col">
+										<div><label>X</label><input type="number" step="0.01" name="bs3d_point_lights[<?php echo esc_attr( (string) $light_index ); ?>][position][x]" value="<?php echo esc_attr( (string) ( $point_light['position']['x'] ?? 0 ) ); ?>" /></div>
+										<div><label>Y</label><input type="number" step="0.01" name="bs3d_point_lights[<?php echo esc_attr( (string) $light_index ); ?>][position][y]" value="<?php echo esc_attr( (string) ( $point_light['position']['y'] ?? 3 ) ); ?>" /></div>
+										<div><label>Z</label><input type="number" step="0.01" name="bs3d_point_lights[<?php echo esc_attr( (string) $light_index ); ?>][position][z]" value="<?php echo esc_attr( (string) ( $point_light['position']['z'] ?? 3 ) ); ?>" /></div>
+									</div>
+								</div>
+							<?php endfor; ?>
+						</div>
+					</div>
+				</div>
+				<div class="bs3d-composer-row bs3d-composer-row-models">
 					<h3><?php esc_html_e( 'Models (Up to 3)', 'beastside-3d-hero-banner' ); ?></h3>
+					<div class="bs3d-model-grid">
 					<?php for ( $i = 0; $i < 3; $i++ ) : ?>
 						<?php $model = isset( $scene_data['models'][ $i ] ) && is_array( $scene_data['models'][ $i ] ) ? $scene_data['models'][ $i ] : array(); ?>
 						<div class="bs3d-model-card" data-model-index="<?php echo esc_attr( (string) $i ); ?>">
@@ -301,8 +409,12 @@ class BS3D_Banner_Post_Type {
 							</div>
 						</div>
 					<?php endfor; ?>
+					</div>
+				</div>
 
-					<h3><?php esc_html_e( 'Background', 'beastside-3d-hero-banner' ); ?></h3>
+				<div class="bs3d-composer-row bs3d-composer-row-settings">
+					<div class="bs3d-settings-col bs3d-section-card">
+						<h3><?php esc_html_e( 'Background', 'beastside-3d-hero-banner' ); ?></h3>
 					<p>
 						<label><?php esc_html_e( 'Mode', 'beastside-3d-hero-banner' ); ?></label>
 						<select name="bs3d_background_mode" id="bs3d_background_mode">
@@ -335,13 +447,7 @@ class BS3D_Banner_Post_Type {
 						</div>
 					</div>
 
-					<h3><?php esc_html_e( 'Camera & Interaction', 'beastside-3d-hero-banner' ); ?></h3>
-					<div class="bs3d-three-col">
-						<div><label><?php esc_html_e( 'FOV', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" min="20" max="100" name="bs3d_camera_fov" value="<?php echo esc_attr( (string) $scene_data['camera']['fov'] ); ?>" /></div>
-						<div><label><?php esc_html_e( 'Camera X', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_camera_x" value="<?php echo esc_attr( (string) $scene_data['camera']['position']['x'] ); ?>" /></div>
-						<div><label><?php esc_html_e( 'Camera Y', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_camera_y" value="<?php echo esc_attr( (string) $scene_data['camera']['position']['y'] ); ?>" /></div>
-					</div>
-					<p><label><?php esc_html_e( 'Camera Z', 'beastside-3d-hero-banner' ); ?></label> <input type="number" step="0.1" min="0.1" name="bs3d_camera_z" value="<?php echo esc_attr( (string) $scene_data['camera']['position']['z'] ); ?>" /></p>
+					<h4><?php esc_html_e( 'Interaction', 'beastside-3d-hero-banner' ); ?></h4>
 					<div class="bs3d-checkbox-row">
 						<label><input type="checkbox" name="bs3d_interaction_tilt" value="1" <?php checked( ! empty( $scene_data['interactions']['tilt'] ) ); ?> /> <?php esc_html_e( 'Tilt', 'beastside-3d-hero-banner' ); ?></label>
 						<label><input type="checkbox" name="bs3d_interaction_rotate" value="1" <?php checked( ! empty( $scene_data['interactions']['rotate'] ) ); ?> /> <?php esc_html_e( 'Rotate', 'beastside-3d-hero-banner' ); ?></label>
@@ -359,19 +465,10 @@ class BS3D_Banner_Post_Type {
 						<input type="number" step="0.01" min="0" max="2" name="bs3d_scroll_intensity" data-bs3d-sync="scroll-intensity" value="<?php echo esc_attr( (string) $scene_data['interactions']['scrollIntensity'] ); ?>" />
 					</div>
 
-					<h3><?php esc_html_e( 'Lighting', 'beastside-3d-hero-banner' ); ?></h3>
-					<div class="bs3d-three-col">
-						<div><label><?php esc_html_e( 'Ambient Intensity', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.01" min="0" max="5" name="bs3d_ambient_intensity" value="<?php echo esc_attr( (string) $scene_data['lighting']['ambientIntensity'] ); ?>" /></div>
-						<div><label><?php esc_html_e( 'Directional Intensity', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.01" min="0" max="8" name="bs3d_directional_intensity" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalIntensity'] ); ?>" /></div>
-						<div><label><?php esc_html_e( 'Dir X', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_light_x" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalPosition']['x'] ); ?>" /></div>
-					</div>
-					<div class="bs3d-three-col">
-						<div><label><?php esc_html_e( 'Dir Y', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_light_y" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalPosition']['y'] ); ?>" /></div>
-						<div><label><?php esc_html_e( 'Dir Z', 'beastside-3d-hero-banner' ); ?></label><input type="number" step="0.1" name="bs3d_light_z" value="<?php echo esc_attr( (string) $scene_data['lighting']['directionalPosition']['z'] ); ?>" /></div>
-						<div><label><input type="checkbox" name="bs3d_light_shadows" value="1" <?php checked( ! empty( $scene_data['lighting']['shadows'] ) ); ?> /> <?php esc_html_e( 'Enable Shadows', 'beastside-3d-hero-banner' ); ?></label></div>
 					</div>
 
-					<h3><?php esc_html_e( 'Banner Settings', 'beastside-3d-hero-banner' ); ?></h3>
+					<div class="bs3d-settings-col bs3d-section-card">
+						<h3><?php esc_html_e( 'Banner Settings', 'beastside-3d-hero-banner' ); ?></h3>
 					<p>
 						<label for="bs3d_poster_url"><strong><?php esc_html_e( 'Poster Fallback URL', 'beastside-3d-hero-banner' ); ?></strong></label><br />
 						<span class="bs3d-url-row">
@@ -423,7 +520,10 @@ class BS3D_Banner_Post_Type {
 						</select>
 					</p>
 
-					<h3><?php esc_html_e( 'Reuse Workflows', 'beastside-3d-hero-banner' ); ?></h3>
+					</div>
+
+					<div class="bs3d-settings-col bs3d-section-card">
+						<h3><?php esc_html_e( 'Reuse Workflows', 'beastside-3d-hero-banner' ); ?></h3>
 					<p>
 						<label><?php esc_html_e( 'Template Name', 'beastside-3d-hero-banner' ); ?></label>
 						<input type="text" name="bs3d_template_name" class="regular-text" placeholder="<?php esc_attr_e( 'Hero Template A', 'beastside-3d-hero-banner' ); ?>" />
@@ -453,15 +553,6 @@ class BS3D_Banner_Post_Type {
 					</p>
 				</div>
 
-				<div class="bs3d-composer-preview">
-					<h3><?php esc_html_e( 'Live Preview', 'beastside-3d-hero-banner' ); ?></h3>
-					<div class="bs3d-banner bs3d-admin-preview-banner" data-bs3d="<?php echo esc_attr( wp_json_encode( $preview_payload ) ); ?>">
-						<div class="bs3d-stage" aria-hidden="true"></div>
-						<?php if ( ! empty( $poster_url ) ) : ?>
-							<img class="bs3d-poster" src="<?php echo esc_url( $poster_url ); ?>" alt="" loading="lazy" />
-						<?php endif; ?>
-					</div>
-					<p class="description"><?php esc_html_e( 'Preview updates from draft changes in real-time. Data is persisted only when you click Update/Publish.', 'beastside-3d-hero-banner' ); ?></p>
 				</div>
 			</div>
 		</div>
@@ -630,7 +721,7 @@ class BS3D_Banner_Post_Type {
 		);
 
 		$scene['camera'] = array(
-			'fov'      => isset( $_POST['bs3d_camera_fov'] ) ? wp_unslash( $_POST['bs3d_camera_fov'] ) : 45,
+			'lensMm'   => isset( $_POST['bs3d_camera_lens_mm'] ) ? wp_unslash( $_POST['bs3d_camera_lens_mm'] ) : self::lens_from_fov( isset( $_POST['bs3d_camera_fov'] ) ? wp_unslash( $_POST['bs3d_camera_fov'] ) : 45 ),
 			'position' => array(
 				'x' => isset( $_POST['bs3d_camera_x'] ) ? wp_unslash( $_POST['bs3d_camera_x'] ) : 0,
 				'y' => isset( $_POST['bs3d_camera_y'] ) ? wp_unslash( $_POST['bs3d_camera_y'] ) : 0,
@@ -639,6 +730,7 @@ class BS3D_Banner_Post_Type {
 		);
 
 		$scene['lighting'] = array(
+			'ambientEnabled'      => ! empty( $_POST['bs3d_ambient_enabled'] ),
 			'ambientIntensity'     => isset( $_POST['bs3d_ambient_intensity'] ) ? wp_unslash( $_POST['bs3d_ambient_intensity'] ) : 0.8,
 			'directionalIntensity' => isset( $_POST['bs3d_directional_intensity'] ) ? wp_unslash( $_POST['bs3d_directional_intensity'] ) : 1.15,
 			'directionalPosition'  => array(
@@ -647,6 +739,7 @@ class BS3D_Banner_Post_Type {
 				'z' => isset( $_POST['bs3d_light_z'] ) ? wp_unslash( $_POST['bs3d_light_z'] ) : 7,
 			),
 			'shadows'              => ! empty( $_POST['bs3d_light_shadows'] ),
+			'pointLights'          => isset( $_POST['bs3d_point_lights'] ) ? wp_unslash( $_POST['bs3d_point_lights'] ) : array(),
 		);
 
 		$scene['interactions'] = array(
@@ -663,6 +756,124 @@ class BS3D_Banner_Post_Type {
 		);
 
 		return $scene;
+	}
+
+	/**
+	 * Allowed lens options in millimeters.
+	 *
+	 * @return array<int,int>
+	 */
+	private static function lens_options() {
+		return array( 8, 16, 24, 35, 50, 70, 85, 100, 120, 150, 180, 200 );
+	}
+
+	/**
+	 * Convert legacy FOV value to nearest supported lens value.
+	 *
+	 * @param mixed $fov FOV value.
+	 * @return int
+	 */
+	private static function lens_from_fov( $fov ) {
+		$fov_value = self::to_float( $fov, 20, 100, 45 );
+		$focal_mm  = 12 / tan( deg2rad( $fov_value ) / 2 );
+		$lenses    = self::lens_options();
+		$nearest   = $lenses[0];
+		$delta     = abs( $nearest - $focal_mm );
+
+		foreach ( $lenses as $lens ) {
+			$next_delta = abs( $lens - $focal_mm );
+			if ( $next_delta < $delta ) {
+				$nearest = $lens;
+				$delta   = $next_delta;
+			}
+		}
+
+		return (int) $nearest;
+	}
+
+	/**
+	 * Sanitize lens selection.
+	 *
+	 * @param mixed $lens_mm Lens value.
+	 * @return int
+	 */
+	private static function sanitize_lens_mm( $lens_mm ) {
+		$lens_mm = (int) self::to_float( $lens_mm, 8, 200, 35 );
+		$lenses  = self::lens_options();
+		if ( in_array( $lens_mm, $lenses, true ) ) {
+			return $lens_mm;
+		}
+
+		$nearest = $lenses[0];
+		$delta   = abs( $nearest - $lens_mm );
+		foreach ( $lenses as $lens ) {
+			$next_delta = abs( $lens - $lens_mm );
+			if ( $next_delta < $delta ) {
+				$nearest = $lens;
+				$delta   = $next_delta;
+			}
+		}
+
+		return (int) $nearest;
+	}
+
+	/**
+	 * Default point light definitions.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function default_point_lights() {
+		return array(
+			array(
+				'enabled'  => false,
+				'color'    => '#ffd2ad',
+				'intensity'=> 2.5,
+				'distance' => 20,
+				'decay'    => 2,
+				'position' => array( 'x' => -2, 'y' => 3, 'z' => 3 ),
+			),
+			array(
+				'enabled'  => false,
+				'color'    => '#f7b3ff',
+				'intensity'=> 2.2,
+				'distance' => 20,
+				'decay'    => 2,
+				'position' => array( 'x' => 0, 'y' => 3, 'z' => 2 ),
+			),
+			array(
+				'enabled'  => false,
+				'color'    => '#a8e6ff',
+				'intensity'=> 2.2,
+				'distance' => 20,
+				'decay'    => 2,
+				'position' => array( 'x' => 2, 'y' => 3, 'z' => 3 ),
+			),
+		);
+	}
+
+	/**
+	 * Sanitize point light configuration.
+	 *
+	 * @param mixed $point_light Raw point light.
+	 * @param array<string,mixed>|null $fallback Default fallback.
+	 * @return array<string,mixed>
+	 */
+	private static function sanitize_point_light( $point_light, $fallback = null ) {
+		$default = is_array( $fallback ) ? $fallback : self::default_point_lights()[0];
+		$light   = is_array( $point_light ) ? $point_light : array();
+
+		return array(
+			'enabled'  => self::to_bool( $light['enabled'] ?? $default['enabled'] ),
+			'color'    => self::to_hex_color( $light['color'] ?? $default['color'], $default['color'] ),
+			'intensity'=> self::to_float( $light['intensity'] ?? $default['intensity'], 0, 20, $default['intensity'] ),
+			'distance' => self::to_float( $light['distance'] ?? $default['distance'], 0, 200, $default['distance'] ),
+			'decay'    => self::to_float( $light['decay'] ?? $default['decay'], 0, 4, $default['decay'] ),
+			'position' => array(
+				'x' => self::to_float( $light['position']['x'] ?? $default['position']['x'], -1000, 1000, $default['position']['x'] ),
+				'y' => self::to_float( $light['position']['y'] ?? $default['position']['y'], -1000, 1000, $default['position']['y'] ),
+				'z' => self::to_float( $light['position']['z'] ?? $default['position']['z'], -1000, 1000, $default['position']['z'] ),
+			),
+		);
 	}
 
 	/**

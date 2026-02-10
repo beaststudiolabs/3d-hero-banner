@@ -4,6 +4,7 @@ Latest stable checkpoint should be used for rollback unless a specific checkpoin
 
 | checkpoint_id | date_utc | change_slug | scope | summary | stable |
 |---|---|---|---|---|---|
+| 20260210-105945-interactive-lighting-lens-layout-v1 | 2026-02-10T10:59:45Z | interactive-lighting-lens-layout-v1 | incremental-change | Added schema v2 lens/lighting model, admin-preview helper drag placement for camera/point lights, and composer 3-row UX reflow with responsive layout. | no |
 | 20260210-092423-admin-legibility-rebalance-v2 | 2026-02-10T09:24:23Z | admin-legibility-rebalance-v2 | incremental-change | Fixed dark-theme legibility by scoping tokens to Composer, rebalancing neutral contrast, adding fallback color vars/placeholders, and bumping plugin version to 0.2.7. | no |
 | 20260210-085621-admin-cache-bust-hotfix | 2026-02-10T08:56:21Z | admin-cache-bust-hotfix | incremental-change | Added filemtime-based cache-busting for admin CSS/composer JS and bumped plugin version to 0.2.6 so admin UI updates are not blocked by stale assets. | no |
 | 20260210-082110-admin-dark-30-70-layout-v2 | 2026-02-10T08:21:10Z | admin-dark-30-70-layout-v2 | incremental-change | Applied dark-glass admin v2 refinements with warm palette tokens, 30/70 Composer split, stronger default control outlines, viewport-smart Live Preview sizing, and Data Transfer shell/panel parity. | no |

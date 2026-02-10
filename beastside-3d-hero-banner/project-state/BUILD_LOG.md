@@ -597,3 +597,38 @@ Checkpoint storage policy note (effective 2026-02-09):
 - `next_actions`:
 - Install/update `0.2.7` build and hard-refresh admin.
 - Confirm readability and palette satisfaction with screenshot pass before next feature phase.
+
+---
+
+## Entry 022
+- `checkpoint_id`: 20260210-105945-interactive-lighting-lens-layout-v1
+- `date_utc`: 2026-02-10T10:59:45Z
+- `request`: Implement interactive admin lighting/camera editing, lens-based camera controls, and composer UX reflow (preview top-left, camera/lighting right, model cards in 3-column row, remaining settings in 3-column row).
+- `decision`: Upgraded scene schema to v2 with lens-based camera (`lensMm`) and point-light stack support (up to 3) including migration from legacy `fov`; rebuilt composer structure into a 3-row layout with edit-mode + drag-plane controls; added admin-preview runtime helper system (camera frame helper, ambient indicator, translucent point-light placeholders) with click-drag placement on XY/XZ/YZ planes; and updated admin CSS to support the new row/column composition while preserving existing public shortcode/API contracts.
+- `compact_context`:
+- `stable_checkpoint`: `20260209-111549-qa-and-release-docs`
+- `branch_policy`: `beta-updates` remains the active forward workstream.
+- `next_phase_objective`: Live WordPress validation of drag placement UX, lens migration behavior, and persistence workflows (template/version/import-export).
+- `acceptance_gate`: Admin preview must support reliable click-drag camera/point-light placement and frontend must apply light/camera effects without helper meshes.
+- `files`:
+- `beastside-3d-hero-banner/includes/class-bs3d-banner-post-type.php`
+- `beastside-3d-hero-banner/assets/js/admin-composer.js`
+- `beastside-3d-hero-banner/assets/js/frontend.js`
+- `beastside-3d-hero-banner/assets/css/admin.css`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-105945-interactive-lighting-lens-layout-v1/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-105945-interactive-lighting-lens-layout-v1/restore.md`
+- `risks`:
+- `php -l` could not be run in this environment (`php` CLI unavailable), so PHP syntax validation is based on static inspection only.
+- Drag-plane UX may need small sensitivity tuning based on live scene scale and user camera setups.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- `node --check beastside-3d-hero-banner/assets/js/admin-composer.js`: pass.
+- Static verification confirms composer field/control additions for `lensMm`, ambient toggle, and 3 point lights in `class-bs3d-banner-post-type.php`.
+- Static verification confirms admin-preview helper bridge events are wired (`bs3d:editor-bridge`, `bs3d:editor-helper-update`) and helper rendering is gated to admin preview surface.
+- `next_actions`:
+- Run live WP test pass for drag editing (`camera`, `pointLight1-3`) across XY/XZ/YZ modes.
+- Confirm schema v2 persistence through Save, Template Apply, Version Restore, and Import/Export roundtrip.

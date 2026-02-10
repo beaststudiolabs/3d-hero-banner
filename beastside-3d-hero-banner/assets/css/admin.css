@@ -406,13 +406,128 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(280px, 30%) minmax(0, 70%);
-  gap: 20px;
+  gap: 18px;
 }
 
-.bs3d-composer-main {
+.bs3d-composer-row {
+  border: 1px solid var(--bs3d-border-strong, rgba(230, 238, 255, 0.42));
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(14, 20, 31, 0.74);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--bs3d-shadow-soft);
+}
+
+.bs3d-composer-row > h3 {
+  margin: 0 0 12px;
+}
+
+.bs3d-composer-row-top {
   display: grid;
+  grid-template-columns: minmax(0, 70%) minmax(320px, 30%);
   gap: 14px;
+  align-items: start;
+}
+
+.bs3d-composer-preview-main {
+  position: sticky;
+  top: 20px;
+  align-self: start;
+  border: 1px solid var(--bs3d-border-strong, rgba(230, 238, 255, 0.42));
+  border-radius: 16px;
+  background: rgba(16, 22, 34, 0.76);
+  box-shadow: var(--bs3d-shadow-soft);
+  padding: 12px;
+}
+
+.bs3d-preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.bs3d-toolbar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.bs3d-toolbar-group > label,
+.bs3d-toolbar-group > span {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--bs3d-text-main, #eef4ff);
+}
+
+.bs3d-plane-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bs3d-plane-switches label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--bs3d-border-strong, rgba(230, 238, 255, 0.42));
+  border-radius: 999px;
+  background: rgba(11, 17, 27, 0.76);
+  color: var(--bs3d-text-main, #eef4ff);
+}
+
+.bs3d-plane-switches input[type="radio"] {
+  margin: 0;
+}
+
+.bs3d-composer-side-panel {
+  display: grid;
+  gap: 12px;
+  align-self: start;
+}
+
+.bs3d-section-card {
+  border: 1px solid var(--bs3d-border-strong, rgba(230, 238, 255, 0.42));
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(18, 25, 38, 0.84);
+  box-shadow: var(--bs3d-shadow-soft);
+}
+
+.bs3d-section-card > h3 {
+  margin: 0 0 10px;
+}
+
+.bs3d-section-card p {
+  margin: 0 0 10px;
+}
+
+.bs3d-section-card p:last-child {
+  margin-bottom: 0;
+}
+
+.bs3d-point-light-card {
+  border: 1px solid var(--bs3d-border, rgba(231, 238, 255, 0.28));
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(10, 15, 24, 0.76);
+  margin-bottom: 10px;
+}
+
+.bs3d-point-light-card:last-child {
+  margin-bottom: 0;
+}
+
+.bs3d-point-light-card h4 {
+  margin: 0 0 8px;
+}
+
+.bs3d-model-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .bs3d-model-card {
@@ -443,6 +558,10 @@
   color: var(--bs3d-text-main, #eef4ff);
 }
 
+.bs3d-three-col > div {
+  min-width: 0;
+}
+
 .bs3d-three-col input[type="number"],
 .bs3d-slider-row input[type="number"] {
   width: 100%;
@@ -470,6 +589,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--bs3d-border-strong, rgba(230, 238, 255, 0.42));
+  border-radius: 12px;
+  background: rgba(11, 17, 27, 0.76);
 }
 
 .bs3d-slider-row {
@@ -484,43 +607,29 @@
   accent-color: var(--bs3d-warm-3);
 }
 
-.bs3d-composer-preview {
-  position: sticky;
-  top: 20px;
-  align-self: start;
-  border: 1px solid var(--bs3d-border-strong, rgba(230, 238, 255, 0.42));
-  border-radius: 16px;
-  background: rgba(16, 22, 33, 0.72);
-  backdrop-filter: blur(12px);
-  box-shadow: var(--bs3d-shadow-soft);
-  padding: 14px;
-}
-
-.bs3d-composer-preview h3 {
-  margin-bottom: 12px;
-}
-
 .bs3d-admin-preview-banner {
-  min-height: clamp(420px, 62vh, 780px);
-  height: clamp(420px, 62vh, 780px);
+  min-height: clamp(420px, 58vh, 760px);
+  height: clamp(420px, 58vh, 760px);
 }
 
-.bs3d-composer-main > p,
-.bs3d-composer-main > h3,
-.bs3d-composer-main > .bs3d-three-col,
-.bs3d-composer-main > .bs3d-slider-row,
-.bs3d-composer-main > .bs3d-checkbox-row {
-  padding: 0 2px;
+.bs3d-composer-row-settings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bs3d-settings-col {
+  min-width: 0;
 }
 
 @media (max-width: 1480px) {
-  .bs3d-composer-grid {
-    grid-template-columns: minmax(260px, 35%) minmax(0, 65%);
+  .bs3d-composer-row-top {
+    grid-template-columns: minmax(0, 65%) minmax(300px, 35%);
   }
 
   .bs3d-admin-preview-banner {
-    min-height: clamp(380px, 58vh, 680px);
-    height: clamp(380px, 58vh, 680px);
+    min-height: clamp(380px, 56vh, 680px);
+    height: clamp(380px, 56vh, 680px);
   }
 }
 
@@ -537,12 +646,17 @@
     align-self: flex-start;
   }
 
-  .bs3d-composer-grid {
+  .bs3d-composer-row-top {
     grid-template-columns: 1fr;
   }
 
-  .bs3d-composer-preview {
+  .bs3d-composer-preview-main {
     position: static;
+  }
+
+  .bs3d-model-grid,
+  .bs3d-composer-row-settings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .bs3d-admin-preview-banner {
@@ -556,6 +670,16 @@
     padding: 14px;
   }
 
+  .bs3d-preview-toolbar {
+    flex-direction: column;
+  }
+
+  .bs3d-toolbar-group {
+    min-width: 0;
+  }
+
+  .bs3d-model-grid,
+  .bs3d-composer-row-settings,
   .bs3d-three-col {
     grid-template-columns: 1fr;
   }

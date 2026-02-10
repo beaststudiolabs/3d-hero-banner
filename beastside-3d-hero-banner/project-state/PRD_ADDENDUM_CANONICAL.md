@@ -222,6 +222,10 @@ This document is the canonical source of approved requirements and acceptance cr
 24. Admin UI v2 styling uses a dark glass palette with always-visible control outlines, a 30/70 Composer layout split on desktop (responsive stack on smaller screens), and viewport-smart Live Preview sizing while preserving existing workflows.
 25. Admin visual updates must be cache-busted on delivery so updated CSS/JS appears immediately after plugin update/install.
 26. Admin Composer and all plugin admin screens maintain readable text and visible idle control outlines under dark theme styling, including Composer token scope and placeholder legibility.
+27. Scene schema v2 is supported with canonical camera lens selection (`camera.lensMm`) and lighting extensions (`lighting.ambientEnabled`, `lighting.pointLights` up to 3), with backward migration from legacy `camera.fov`.
+28. Admin preview supports dedicated edit mode for camera/point lights with axis-plane constrained drag placement (`XY`, `XZ`, `YZ`) and updates draft form coordinates in real time.
+29. Admin-only helper visuals (camera frame + ambient indicator + point-light placeholders) are rendered only on `admin-preview` surface and never on Elementor/shortcode frontend surfaces.
+30. Banner Composer layout supports the requested 3-row UX structure: row 1 preview + camera/lighting, row 2 model cards in 3 columns, row 3 remaining settings in 3 columns with responsive collapse.
 
 ## Non-Negotiable Defaults
 - Debug mode defaults ON.
@@ -304,3 +308,4 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260210-082110-admin-dark-30-70-layout-v2 | 2026-02-10T08:21:10Z | Applied admin dark-glass v2 refinements: warm palette tokens, stronger default control outlines, 30/70 Composer split, viewport-smart Live Preview sizing, and Data Transfer shell/panel parity. |
 | 20260210-085621-admin-cache-bust-hotfix | 2026-02-10T08:56:21Z | Added filemtime-based admin asset cache-busting and bumped plugin version to 0.2.6 so new admin visuals reliably appear after update/install. |
 | 20260210-092423-admin-legibility-rebalance-v2 | 2026-02-10T09:24:23Z | Fixed dark-theme legibility by hardening Composer token scope, rebalancing neutral contrast, adding fallback-safe color vars, and explicit placeholder styling; bumped version to 0.2.7. |
+| 20260210-105945-interactive-lighting-lens-layout-v1 | 2026-02-10T10:59:45Z | Added scene schema v2 (lens camera + ambient toggle + point lights), admin-only interactive helper drag placement in preview, and composer 3-row UX reflow (preview/camera-lighting, models, remaining settings). |

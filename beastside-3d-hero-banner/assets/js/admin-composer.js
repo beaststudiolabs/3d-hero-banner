@@ -8,6 +8,10 @@
 
   var hiddenSceneInput = document.getElementById("bs3d_scene_config");
   var previewBanner = root.querySelector(".bs3d-admin-preview-banner");
+  var editorBridgeState = {
+    editMode: "none",
+    dragPlane: "xy",
+  };
 
   function getField(name) {
     var fields = document.getElementsByName(name);
@@ -57,6 +61,20 @@
     }
   }
 
+  function normalizeEditMode(value) {
+    var mode = String(value || "none");
+    var allowed = ["none", "camera", "pointLight1", "pointLight2", "pointLight3"];
+    return allowed.indexOf(mode) > -1 ? mode : "none";
+  }
+
+  function normalizeDragPlane(value) {
+    var plane = String(value || "xy").toLowerCase();
+    if (plane !== "xy" && plane !== "xz" && plane !== "yz") {
+      return "xy";
+    }
+    return plane;
+  }
+
   function collectModels() {
     var models = [];
 
@@ -93,9 +111,31 @@
     return models;
   }
 
+  function collectPointLights() {
+    var lights = [];
+
+    for (var i = 0; i < 3; i += 1) {
+      var prefix = "bs3d_point_lights[" + i + "]";
+      lights.push({
+        enabled: getBoolean(prefix + "[enabled]", false),
+        color: String(getValue(prefix + "[color]", "#ffd2ad") || "#ffd2ad"),
+        intensity: getNumber(prefix + "[intensity]", 2.5),
+        distance: getNumber(prefix + "[distance]", 20),
+        decay: getNumber(prefix + "[decay]", 2),
+        position: {
+          x: getNumber(prefix + "[position][x]", 0),
+          y: getNumber(prefix + "[position][y]", 3),
+          z: getNumber(prefix + "[position][z]", 3),
+        },
+      });
+    }
+
+    return lights;
+  }
+
   function collectSceneConfig() {
     return {
-      sceneSchemaVersion: 1,
+      sceneSchemaVersion: 2,
       models: collectModels(),
       background: {
         mode: String(getValue("bs3d_background_mode", "static") || "static"),
@@ -104,7 +144,7 @@
         dioramaDepth: getNumber("bs3d_diorama_depth", 8),
       },
       camera: {
-        fov: getNumber("bs3d_camera_fov", 45),
+        lensMm: getNumber("bs3d_camera_lens_mm", 35),
         position: {
           x: getNumber("bs3d_camera_x", 0),
           y: getNumber("bs3d_camera_y", 0),
@@ -112,6 +152,7 @@
         },
       },
       lighting: {
+        ambientEnabled: getBoolean("bs3d_ambient_enabled", true),
         ambientIntensity: getNumber("bs3d_ambient_intensity", 0.8),
         directionalIntensity: getNumber("bs3d_directional_intensity", 1.15),
         directionalPosition: {
@@ -120,6 +161,7 @@
           z: getNumber("bs3d_light_z", 7),
         },
         shadows: getBoolean("bs3d_light_shadows", true),
+        pointLights: collectPointLights(),
       },
       interactions: {
         tilt: getBoolean("bs3d_interaction_tilt", true),
@@ -203,6 +245,34 @@
     hiddenSceneInput.value = JSON.stringify(sceneConfig);
   }
 
+  function dispatchEditorBridge() {
+    if (!previewBanner) {
+      return;
+    }
+
+    previewBanner.setAttribute("data-bs3d-edit-mode", editorBridgeState.editMode);
+    previewBanner.setAttribute("data-bs3d-drag-plane", editorBridgeState.dragPlane);
+
+    window.dispatchEvent(
+      new CustomEvent("bs3d:editor-bridge", {
+        detail: {
+          container: previewBanner,
+          editMode: editorBridgeState.editMode,
+          dragPlane: editorBridgeState.dragPlane,
+        },
+      })
+    );
+  }
+
+  function syncEditorBridgeFromControls() {
+    editorBridgeState.editMode = normalizeEditMode(getValue("bs3d_admin_edit_mode", "none"));
+
+    var activePlane = root.querySelector('input[name="bs3d_admin_drag_plane"]:checked');
+    editorBridgeState.dragPlane = normalizeDragPlane(activePlane ? activePlane.value : "xy");
+
+    dispatchEditorBridge();
+  }
+
   function updatePreviewPayload(sceneConfig) {
     if (!previewBanner) {
       return;
@@ -219,10 +289,13 @@
     payload.viewportMode = viewportMode;
     payload.effectiveDebug = true;
     payload.overlayEnabled = true;
+    payload.editorMode = editorBridgeState.editMode;
+    payload.dragPlane = editorBridgeState.dragPlane;
 
     previewBanner.setAttribute("data-bs3d", JSON.stringify(payload));
     previewBanner.classList.toggle("bs3d-fullscreen", viewportMode === "fullscreen");
     updatePosterImage();
+    dispatchEditorBridge();
 
     if (window.BS3DFrontend && typeof window.BS3DFrontend.bootstrapBanner === "function") {
       window.BS3DFrontend.bootstrapBanner(previewBanner);
@@ -295,16 +368,70 @@
     });
   }
 
+  function setNumberField(name, value) {
+    var field = getField(name);
+    if (!field) {
+      return;
+    }
+
+    var rounded = Math.round(Number(value || 0) * 1000) / 1000;
+    field.value = String(rounded);
+  }
+
+  function bindEditorHelperUpdates() {
+    window.addEventListener("bs3d:editor-helper-update", function (event) {
+      var detail = event && event.detail ? event.detail : null;
+      if (!detail || detail.container !== previewBanner || !detail.position) {
+        return;
+      }
+
+      var position = detail.position;
+      if (detail.target === "camera") {
+        setNumberField("bs3d_camera_x", position.x);
+        setNumberField("bs3d_camera_y", position.y);
+        setNumberField("bs3d_camera_z", position.z);
+      } else if (detail.target && detail.target.indexOf("pointLight") === 0) {
+        var index = Number(String(detail.target).replace("pointLight", "")) - 1;
+        if (Number.isFinite(index) && index >= 0 && index <= 2) {
+          var prefix = "bs3d_point_lights[" + index + "][position]";
+          setNumberField(prefix + "[x]", position.x);
+          setNumberField(prefix + "[y]", position.y);
+          setNumberField(prefix + "[z]", position.z);
+        }
+      }
+
+      updateHiddenScene(collectSceneConfig());
+    });
+  }
+
   function bindInputListeners() {
     var fields = root.querySelectorAll("input, select, textarea");
     fields.forEach(function (field) {
       field.addEventListener("input", function () {
         syncLinkedControls(field);
+
+        if (
+          field.name === "bs3d_admin_edit_mode" ||
+          field.name === "bs3d_admin_drag_plane"
+        ) {
+          syncEditorBridgeFromControls();
+          return;
+        }
+
         scheduleRefresh();
       });
 
       field.addEventListener("change", function () {
         syncLinkedControls(field);
+
+        if (
+          field.name === "bs3d_admin_edit_mode" ||
+          field.name === "bs3d_admin_drag_plane"
+        ) {
+          syncEditorBridgeFromControls();
+          return;
+        }
+
         scheduleRefresh();
       });
     });
@@ -313,6 +440,8 @@
   function init() {
     bindInputListeners();
     bindMediaButtons();
+    bindEditorHelperUpdates();
+    syncEditorBridgeFromControls();
     updateDioramaVisibility();
 
     var sceneConfig = collectSceneConfig();
