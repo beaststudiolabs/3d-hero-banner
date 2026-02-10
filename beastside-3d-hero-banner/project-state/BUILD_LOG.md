@@ -671,3 +671,36 @@ Checkpoint storage policy note (effective 2026-02-09):
 - `next_actions`:
 - Run live drag QA for `ambient`, `pointLight1-3`, and `model1-3` across XY/XZ/YZ planes.
 - Validate overlay toggles (grid/axes/label) and confirm no helper visuals render on published Elementor/shortcode pages.
+
+---
+
+## Entry 024
+- `checkpoint_id`: 20260210-135027-model-visibility-transformcontrols-hotfix
+- `date_utc`: 2026-02-10T13:50:27Z
+- `request`: Models disappeared in admin preview after the interactive lighting phase; restore model rendering reliability.
+- `decision`: Fixed the TransformControls vendor shim to use class-based inheritance (`class TransformControls extends THREE.Object3D`) compatible with Three.js r146, and added defensive initialization in `frontend.js` so transform-control setup failures only disable gizmo dragging instead of aborting scene runtime/model loading. Stripped BOM from `TransformControls.js` and bumped plugin version to `0.2.8` to force frontend cache-bust for the hotfix rollout.
+- `compact_context`:
+- `stable_checkpoint`: `20260209-111549-qa-and-release-docs`
+- `branch_policy`: `beta-updates` remains active.
+- `next_phase_objective`: User retest of model visibility + ambient/point/model drag controls in admin preview and published surfaces.
+- `acceptance_gate`: Models must render again in admin preview and published output; transform-control failures must not break model load/render pipeline.
+- `files`:
+- `beastside-3d-hero-banner/assets/vendor/three/TransformControls.js`
+- `beastside-3d-hero-banner/assets/js/frontend.js`
+- `beastside-3d-hero-banner/beastside-3d-hero-banner.php`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-135027-model-visibility-transformcontrols-hotfix/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-135027-model-visibility-transformcontrols-hotfix/restore.md`
+- `risks`:
+- The local TransformControls shim remains a maintained compatibility layer, so future Three.js upgrades should re-verify constructor compatibility and pointer drag behavior.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/vendor/three/TransformControls.js`: pass.
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- Static verification confirms guarded `try/catch` around transform-control initialization and warning diagnostic `transform_controls_unavailable`.
+- Static verification confirms plugin version bump to `0.2.8`.
+- `next_actions`:
+- Re-test admin preview model visibility and confirm `Model Status` increments above `0/n`.
+- Verify drag still works for available targets and confirm fallback warning only appears when transform-controls init actually fails.

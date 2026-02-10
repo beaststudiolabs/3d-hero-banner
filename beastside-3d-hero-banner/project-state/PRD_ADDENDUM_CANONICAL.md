@@ -231,6 +231,7 @@ This document is the canonical source of approved requirements and acceptance cr
 33. Camera frame helper remains visible as a non-draggable guide in admin preview.
 34. Admin preview provides thin grid overlay (default ON), axes toggle, and selected-target floating XYZ label toggle without persisting these UI states into scene payload.
 35. Drag updates in admin preview mutate runtime + form coordinates directly without full preview re-bootstrap blink during active drag.
+36. Transform-controls or helper initialization errors in admin preview must not block core model loading/rendering; runtime must continue with gizmos disabled and diagnostics warning logged.
 
 ## Non-Negotiable Defaults
 - Debug mode defaults ON.
@@ -315,3 +316,4 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260210-092423-admin-legibility-rebalance-v2 | 2026-02-10T09:24:23Z | Fixed dark-theme legibility by hardening Composer token scope, rebalancing neutral contrast, adding fallback-safe color vars, and explicit placeholder styling; bumped version to 0.2.7. |
 | 20260210-105945-interactive-lighting-lens-layout-v1 | 2026-02-10T10:59:45Z | Added scene schema v2 (lens camera + ambient toggle + point lights), admin-only interactive helper drag placement in preview, and composer 3-row UX reflow (preview/camera-lighting, models, remaining settings). |
 | 20260210-122522-ambient-gizmo-grid-model-drag-v1 | 2026-02-10T12:25:22Z | Upgraded to scene schema v3 with `ambientPosition`, switched ambient runtime to hemisphere light, added TransformControls-based admin drag for ambient/point/model targets, and added admin-preview grid/axes/selected XYZ label toggles with no public helper rendering. |
+| 20260210-135027-model-visibility-transformcontrols-hotfix | 2026-02-10T13:50:27Z | Fixed model-visibility regression by replacing legacy TransformControls constructor style with class-based inheritance compatible with Three.js r146 and guarding transform-controls init so render/model load continues if gizmo setup fails; bumped version to 0.2.8. |

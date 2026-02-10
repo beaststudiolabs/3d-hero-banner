@@ -1207,26 +1207,41 @@
 
       scene.add(helperGroup);
       if (THREE.TransformControls) {
-        transformControls = new THREE.TransformControls(camera, renderer.domElement);
-        transformControls.setMode("translate");
-        transformControls.setSpace("world");
-        transformControls.setTranslationSnap(null);
-        transformControls.visible = false;
-        transformControls.addEventListener("dragging-changed", function (event) {
-          editorState.transformDragging = !!(event && event.value);
-        });
-        transformControls.addEventListener("objectChange", function () {
-          var target = getModeTarget();
-          if (!target || !transformControls || !transformControls.object) {
-            return;
-          }
+        try {
+          transformControls = new THREE.TransformControls(camera, renderer.domElement);
+          transformControls.setMode("translate");
+          transformControls.setSpace("world");
+          transformControls.setTranslationSnap(null);
+          transformControls.visible = false;
+          transformControls.addEventListener("dragging-changed", function (event) {
+            editorState.transformDragging = !!(event && event.value);
+          });
+          transformControls.addEventListener("objectChange", function () {
+            var target = getModeTarget();
+            if (!target || !transformControls || !transformControls.object) {
+              return;
+            }
 
-          setTargetPosition(target, transformControls.object.position);
-          dispatchEditorHelperUpdate(targetToName(target), target.index, transformControls.object.position);
-          updateRuntimeLighting(THREE);
-          syncEditorHelpers(THREE);
-        });
-        scene.add(transformControls);
+            setTargetPosition(target, transformControls.object.position);
+            dispatchEditorHelperUpdate(targetToName(target), target.index, transformControls.object.position);
+            updateRuntimeLighting(THREE);
+            syncEditorHelpers(THREE);
+          });
+          scene.add(transformControls);
+        } catch (transformError) {
+          transformControls = null;
+          emitDiagnostic(
+            payload,
+            "warn",
+            "transform_controls_unavailable",
+            "Transform controls failed to initialize",
+            {
+              hint: "Scene rendering continues without drag gizmos.",
+              message: transformError && transformError.message ? transformError.message : "unknown_error",
+            },
+            false
+          );
+        }
       }
 
       ensureEditorCoordinateLabel();
