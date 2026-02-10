@@ -171,14 +171,25 @@ class BS3D_Plugin {
 		}
 		?>
 		<div class="wrap bs3d-admin-wrap">
-			<h1><?php esc_html_e( 'Beastside 3D Hero Banner Settings', 'beastside-3d-hero-banner' ); ?></h1>
-			<form method="post" action="options.php">
-				<?php
-				settings_fields( 'bs3d_settings_group' );
-				do_settings_sections( 'bs3d-settings' );
-				submit_button( __( 'Save Settings', 'beastside-3d-hero-banner' ) );
-				?>
-			</form>
+			<div class="bs3d-page-shell bs3d-page-shell-settings">
+				<div class="bs3d-page-header">
+					<div>
+						<h1><?php esc_html_e( 'Beastside 3D Hero Banner Settings', 'beastside-3d-hero-banner' ); ?></h1>
+						<p class="bs3d-page-subtitle"><?php esc_html_e( 'Configure global diagnostics, overlay visibility, and debugging defaults for every banner.', 'beastside-3d-hero-banner' ); ?></p>
+					</div>
+					<span class="bs3d-version-pill"><?php echo esc_html( 'v' . BS3D_VERSION ); ?></span>
+				</div>
+
+				<div class="bs3d-panel">
+					<form method="post" action="options.php" class="bs3d-settings-form">
+						<?php
+						settings_fields( 'bs3d_settings_group' );
+						do_settings_sections( 'bs3d-settings' );
+						submit_button( __( 'Save Settings', 'beastside-3d-hero-banner' ) );
+						?>
+					</form>
+				</div>
+			</div>
 		</div>
 		<?php
 	}
@@ -202,101 +213,115 @@ class BS3D_Plugin {
 		$logs     = BS3D_Diagnostics::query_logs( $filters, 250 );
 		?>
 		<div class="wrap bs3d-admin-wrap">
-			<h1><?php esc_html_e( 'Diagnostics', 'beastside-3d-hero-banner' ); ?></h1>
-
-			<?php if ( isset( $_GET['cleared'] ) && '1' === $_GET['cleared'] ) : ?>
-				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Diagnostics logs cleared.', 'beastside-3d-hero-banner' ); ?></p></div>
-			<?php endif; ?>
-
-			<div class="bs3d-status-grid">
-				<?php foreach ( $statuses as $status ) : ?>
-					<div class="bs3d-status-card bs3d-status-<?php echo esc_attr( $status['status'] ); ?>">
-						<h3><?php echo esc_html( $status['label'] ); ?></h3>
-						<p><?php echo esc_html( $status['details'] ); ?></p>
+			<div class="bs3d-page-shell bs3d-page-shell-diagnostics">
+				<div class="bs3d-page-header">
+					<div>
+						<h1><?php esc_html_e( 'Diagnostics', 'beastside-3d-hero-banner' ); ?></h1>
+						<p class="bs3d-page-subtitle"><?php esc_html_e( 'Track runtime health, inspect logs, and export troubleshooting data for support workflows.', 'beastside-3d-hero-banner' ); ?></p>
 					</div>
-				<?php endforeach; ?>
-			</div>
+					<span class="bs3d-version-pill"><?php echo esc_html( 'v' . BS3D_VERSION ); ?></span>
+				</div>
 
-			<h2><?php esc_html_e( 'Log Filters', 'beastside-3d-hero-banner' ); ?></h2>
-			<form method="get" class="bs3d-filter-form">
-				<input type="hidden" name="page" value="bs3d-diagnostics" />
-				<select name="level">
-					<option value=""><?php esc_html_e( 'All Levels', 'beastside-3d-hero-banner' ); ?></option>
-					<option value="info" <?php selected( 'info', $filters['level'] ); ?>>info</option>
-					<option value="warn" <?php selected( 'warn', $filters['level'] ); ?>>warn</option>
-					<option value="error" <?php selected( 'error', $filters['level'] ); ?>>error</option>
-				</select>
-				<select name="surface">
-					<option value=""><?php esc_html_e( 'All Contexts', 'beastside-3d-hero-banner' ); ?></option>
-					<option value="admin-preview" <?php selected( 'admin-preview', $filters['surface'] ); ?>>admin-preview</option>
-					<option value="frontend" <?php selected( 'frontend', $filters['surface'] ); ?>>frontend</option>
-					<option value="elementor" <?php selected( 'elementor', $filters['surface'] ); ?>>elementor</option>
-					<option value="shortcode" <?php selected( 'shortcode', $filters['surface'] ); ?>>shortcode</option>
-					<option value="import-export" <?php selected( 'import-export', $filters['surface'] ); ?>>import-export</option>
-					<option value="startup" <?php selected( 'startup', $filters['surface'] ); ?>>startup</option>
-				</select>
-				<input type="number" name="banner_id" placeholder="<?php esc_attr_e( 'Banner ID', 'beastside-3d-hero-banner' ); ?>" value="<?php echo esc_attr( $filters['banner_id'] ?: '' ); ?>" />
-				<input type="text" name="slug" placeholder="<?php esc_attr_e( 'Slug', 'beastside-3d-hero-banner' ); ?>" value="<?php echo esc_attr( $filters['slug'] ); ?>" />
-				<button type="submit" class="button"><?php esc_html_e( 'Apply', 'beastside-3d-hero-banner' ); ?></button>
-			</form>
-
-			<div class="bs3d-actions">
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="bs3d_clear_logs" />
-					<?php wp_nonce_field( 'bs3d_clear_logs' ); ?>
-					<button type="submit" class="button button-secondary"><?php esc_html_e( 'Clear Logs', 'beastside-3d-hero-banner' ); ?></button>
-				</form>
-
-				<form method="get" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="bs3d_export_logs" />
-					<?php wp_nonce_field( 'bs3d_export_logs', 'bs3d_export_nonce' ); ?>
-					<input type="hidden" name="level" value="<?php echo esc_attr( $filters['level'] ); ?>" />
-					<input type="hidden" name="surface" value="<?php echo esc_attr( $filters['surface'] ); ?>" />
-					<input type="hidden" name="banner_id" value="<?php echo esc_attr( (string) $filters['banner_id'] ); ?>" />
-					<input type="hidden" name="slug" value="<?php echo esc_attr( $filters['slug'] ); ?>" />
-					<button type="submit" class="button button-primary"><?php esc_html_e( 'Export Diagnostics JSON', 'beastside-3d-hero-banner' ); ?></button>
-				</form>
-			</div>
-
-			<h2><?php esc_html_e( 'Recent Logs', 'beastside-3d-hero-banner' ); ?></h2>
-			<table class="widefat striped bs3d-log-table">
-				<thead>
-				<tr>
-					<th><?php esc_html_e( 'Timestamp (UTC)', 'beastside-3d-hero-banner' ); ?></th>
-					<th><?php esc_html_e( 'Level', 'beastside-3d-hero-banner' ); ?></th>
-					<th><?php esc_html_e( 'Context', 'beastside-3d-hero-banner' ); ?></th>
-					<th><?php esc_html_e( 'Banner', 'beastside-3d-hero-banner' ); ?></th>
-					<th><?php esc_html_e( 'Code', 'beastside-3d-hero-banner' ); ?></th>
-					<th><?php esc_html_e( 'Message', 'beastside-3d-hero-banner' ); ?></th>
-					<th><?php esc_html_e( 'Meta', 'beastside-3d-hero-banner' ); ?></th>
-				</tr>
-				</thead>
-				<tbody>
-				<?php if ( empty( $logs ) ) : ?>
-					<tr><td colspan="7"><?php esc_html_e( 'No logs found for current filters.', 'beastside-3d-hero-banner' ); ?></td></tr>
-				<?php else : ?>
-					<?php foreach ( $logs as $row ) : ?>
-						<tr>
-							<td><?php echo esc_html( (string) $row['created_at'] ); ?></td>
-							<td><span class="bs3d-level bs3d-level-<?php echo esc_attr( (string) $row['level'] ); ?>"><?php echo esc_html( (string) $row['level'] ); ?></span></td>
-							<td><?php echo esc_html( (string) $row['surface'] ); ?></td>
-							<td>
-								<?php
-								$banner_label = ! empty( $row['banner_id'] ) ? '#' . (int) $row['banner_id'] : '-';
-								if ( ! empty( $row['slug'] ) ) {
-									$banner_label .= ' / ' . (string) $row['slug'];
-								}
-								echo esc_html( $banner_label );
-								?>
-							</td>
-							<td><?php echo esc_html( (string) $row['code'] ); ?></td>
-							<td><?php echo esc_html( (string) $row['message'] ); ?></td>
-							<td><code><?php echo esc_html( (string) $row['meta'] ); ?></code></td>
-						</tr>
-					<?php endforeach; ?>
+				<?php if ( isset( $_GET['cleared'] ) && '1' === $_GET['cleared'] ) : ?>
+					<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Diagnostics logs cleared.', 'beastside-3d-hero-banner' ); ?></p></div>
 				<?php endif; ?>
-				</tbody>
-			</table>
+
+				<div class="bs3d-panel">
+					<div class="bs3d-status-grid">
+						<?php foreach ( $statuses as $status ) : ?>
+							<div class="bs3d-status-card bs3d-status-<?php echo esc_attr( $status['status'] ); ?>">
+								<h3><?php echo esc_html( $status['label'] ); ?></h3>
+								<p><?php echo esc_html( $status['details'] ); ?></p>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				</div>
+
+				<div class="bs3d-panel">
+					<h2><?php esc_html_e( 'Log Filters', 'beastside-3d-hero-banner' ); ?></h2>
+					<form method="get" class="bs3d-filter-form">
+						<input type="hidden" name="page" value="bs3d-diagnostics" />
+						<select name="level">
+							<option value=""><?php esc_html_e( 'All Levels', 'beastside-3d-hero-banner' ); ?></option>
+							<option value="info" <?php selected( 'info', $filters['level'] ); ?>>info</option>
+							<option value="warn" <?php selected( 'warn', $filters['level'] ); ?>>warn</option>
+							<option value="error" <?php selected( 'error', $filters['level'] ); ?>>error</option>
+						</select>
+						<select name="surface">
+							<option value=""><?php esc_html_e( 'All Contexts', 'beastside-3d-hero-banner' ); ?></option>
+							<option value="admin-preview" <?php selected( 'admin-preview', $filters['surface'] ); ?>>admin-preview</option>
+							<option value="frontend" <?php selected( 'frontend', $filters['surface'] ); ?>>frontend</option>
+							<option value="elementor" <?php selected( 'elementor', $filters['surface'] ); ?>>elementor</option>
+							<option value="shortcode" <?php selected( 'shortcode', $filters['surface'] ); ?>>shortcode</option>
+							<option value="import-export" <?php selected( 'import-export', $filters['surface'] ); ?>>import-export</option>
+							<option value="startup" <?php selected( 'startup', $filters['surface'] ); ?>>startup</option>
+						</select>
+						<input type="number" name="banner_id" placeholder="<?php esc_attr_e( 'Banner ID', 'beastside-3d-hero-banner' ); ?>" value="<?php echo esc_attr( $filters['banner_id'] ?: '' ); ?>" />
+						<input type="text" name="slug" placeholder="<?php esc_attr_e( 'Slug', 'beastside-3d-hero-banner' ); ?>" value="<?php echo esc_attr( $filters['slug'] ); ?>" />
+						<button type="submit" class="button"><?php esc_html_e( 'Apply', 'beastside-3d-hero-banner' ); ?></button>
+					</form>
+
+					<div class="bs3d-actions">
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<input type="hidden" name="action" value="bs3d_clear_logs" />
+							<?php wp_nonce_field( 'bs3d_clear_logs' ); ?>
+							<button type="submit" class="button button-secondary"><?php esc_html_e( 'Clear Logs', 'beastside-3d-hero-banner' ); ?></button>
+						</form>
+
+						<form method="get" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<input type="hidden" name="action" value="bs3d_export_logs" />
+							<?php wp_nonce_field( 'bs3d_export_logs', 'bs3d_export_nonce' ); ?>
+							<input type="hidden" name="level" value="<?php echo esc_attr( $filters['level'] ); ?>" />
+							<input type="hidden" name="surface" value="<?php echo esc_attr( $filters['surface'] ); ?>" />
+							<input type="hidden" name="banner_id" value="<?php echo esc_attr( (string) $filters['banner_id'] ); ?>" />
+							<input type="hidden" name="slug" value="<?php echo esc_attr( $filters['slug'] ); ?>" />
+							<button type="submit" class="button button-primary"><?php esc_html_e( 'Export Diagnostics JSON', 'beastside-3d-hero-banner' ); ?></button>
+						</form>
+					</div>
+				</div>
+
+				<div class="bs3d-panel">
+					<h2><?php esc_html_e( 'Recent Logs', 'beastside-3d-hero-banner' ); ?></h2>
+					<table class="widefat striped bs3d-log-table">
+						<thead>
+						<tr>
+							<th><?php esc_html_e( 'Timestamp (UTC)', 'beastside-3d-hero-banner' ); ?></th>
+							<th><?php esc_html_e( 'Level', 'beastside-3d-hero-banner' ); ?></th>
+							<th><?php esc_html_e( 'Context', 'beastside-3d-hero-banner' ); ?></th>
+							<th><?php esc_html_e( 'Banner', 'beastside-3d-hero-banner' ); ?></th>
+							<th><?php esc_html_e( 'Code', 'beastside-3d-hero-banner' ); ?></th>
+							<th><?php esc_html_e( 'Message', 'beastside-3d-hero-banner' ); ?></th>
+							<th><?php esc_html_e( 'Meta', 'beastside-3d-hero-banner' ); ?></th>
+						</tr>
+						</thead>
+						<tbody>
+						<?php if ( empty( $logs ) ) : ?>
+							<tr><td colspan="7"><?php esc_html_e( 'No logs found for current filters.', 'beastside-3d-hero-banner' ); ?></td></tr>
+						<?php else : ?>
+							<?php foreach ( $logs as $row ) : ?>
+								<tr>
+									<td><?php echo esc_html( (string) $row['created_at'] ); ?></td>
+									<td><span class="bs3d-level bs3d-level-<?php echo esc_attr( (string) $row['level'] ); ?>"><?php echo esc_html( (string) $row['level'] ); ?></span></td>
+									<td><?php echo esc_html( (string) $row['surface'] ); ?></td>
+									<td>
+										<?php
+										$banner_label = ! empty( $row['banner_id'] ) ? '#' . (int) $row['banner_id'] : '-';
+										if ( ! empty( $row['slug'] ) ) {
+											$banner_label .= ' / ' . (string) $row['slug'];
+										}
+										echo esc_html( $banner_label );
+										?>
+									</td>
+									<td><?php echo esc_html( (string) $row['code'] ); ?></td>
+									<td><?php echo esc_html( (string) $row['message'] ); ?></td>
+									<td><code><?php echo esc_html( (string) $row['meta'] ); ?></code></td>
+								</tr>
+							<?php endforeach; ?>
+						<?php endif; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
 		</div>
 		<?php
 	}

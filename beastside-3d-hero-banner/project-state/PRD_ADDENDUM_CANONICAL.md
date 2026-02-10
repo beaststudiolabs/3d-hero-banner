@@ -218,6 +218,7 @@ This document is the canonical source of approved requirements and acceptance cr
 20. Published shortcode/Elementor banners can recover from direct fetch CORS/network failures using signature-validated, banner-bound proxy fallback (not open proxy).
 21. Banner composer provides per-banner viewport mode (`standard` or `fullscreen`) and fullscreen mode renders at viewport height on published pages.
 22. In Elementor `standard` mode, banners auto-stretch to the widget/container height (with 340px fallback when parent height is not defined), and runtime canvas resizes when container layout changes without requiring window resize.
+23. Admin UI surfaces (Settings, Diagnostics, Banner Composer) support a modern glass/bubble presentation layer while preserving existing control behavior and data flow.
 
 ## Non-Negotiable Defaults
 - Debug mode defaults ON.
@@ -296,3 +297,4 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260209-125515-save-state-docs-only-and-proxy-parse-fix | 2026-02-09T12:55:15Z | Switched checkpoints to markdown-only storage (no source zip/manifest) and fixed admin proxy GLB parse path via fetch+GLTFLoader.parse. |
 | 20260210-010938-frontend-safe-proxy-and-fullscreen | 2026-02-10T01:09:38Z | Added signed public-safe model proxy fallback for published banners and introduced per-banner fullscreen viewport mode (100vh/100dvh). |
 | 20260210-050120-elementor-auto-stretch-height | 2026-02-10T05:01:20Z | Added Elementor standard-mode container auto-stretch height chain and ResizeObserver runtime sizing updates to prevent capped published banner height. |
+| 20260210-061745-admin-ui-bubble-refresh-v1 | 2026-02-10T06:17:45Z | Applied admin-first modern bubble/glass visual refresh to Settings, Diagnostics, and Composer with scoped markup shells and responsive styling. |

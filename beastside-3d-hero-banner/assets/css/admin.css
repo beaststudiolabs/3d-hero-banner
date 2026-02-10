@@ -1,58 +1,320 @@
-.bs3d-admin-wrap .bs3d-status-grid {
+﻿.bs3d-admin-wrap {
+  --bs3d-bg-top: #f6f8fb;
+  --bs3d-bg-bottom: #edf3ff;
+  --bs3d-surface: rgba(255, 255, 255, 0.78);
+  --bs3d-surface-strong: #ffffff;
+  --bs3d-border: rgba(15, 23, 42, 0.1);
+  --bs3d-border-strong: rgba(30, 64, 175, 0.2);
+  --bs3d-shadow: 0 18px 42px rgba(15, 23, 42, 0.09);
+  --bs3d-shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.06);
+  --bs3d-text-main: #0f172a;
+  --bs3d-text-muted: #475569;
+  --bs3d-accent: #0a84ff;
+  --bs3d-accent-2: #12b5cb;
+  --bs3d-accent-soft: rgba(10, 132, 255, 0.12);
+  --bs3d-success: #22a65c;
+  --bs3d-warning: #c68a00;
+  --bs3d-error: #c53a58;
+  --bs3d-radius-lg: 20px;
+  --bs3d-radius-md: 14px;
+  --bs3d-radius-sm: 10px;
+  color: var(--bs3d-text-main);
+  font-family: "SF Pro Text", "SF Pro Display", "Segoe UI Variable Text", "Segoe UI", Tahoma, sans-serif;
+}
+
+.bs3d-admin-wrap .bs3d-page-shell,
+#bs3d-composer-root {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--bs3d-border);
+  border-radius: var(--bs3d-radius-lg);
+  background: linear-gradient(155deg, var(--bs3d-bg-top) 0%, var(--bs3d-bg-bottom) 100%);
+  box-shadow: var(--bs3d-shadow);
+}
+
+.bs3d-admin-wrap .bs3d-page-shell {
+  margin-top: 14px;
+  padding: 24px;
+}
+
+.bs3d-admin-wrap .bs3d-page-shell::before,
+#bs3d-composer-root::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 9% 12%, rgba(10, 132, 255, 0.2), rgba(10, 132, 255, 0) 35%),
+    radial-gradient(circle at 82% 9%, rgba(18, 181, 203, 0.2), rgba(18, 181, 203, 0) 38%);
+}
+
+.bs3d-admin-wrap .bs3d-page-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.bs3d-admin-wrap .bs3d-page-header h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+}
+
+.bs3d-admin-wrap .bs3d-page-subtitle {
+  margin: 8px 0 0;
+  color: var(--bs3d-text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.bs3d-admin-wrap .bs3d-version-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--bs3d-border-strong);
+  background: linear-gradient(135deg, rgba(10, 132, 255, 0.17), rgba(18, 181, 203, 0.14));
+  color: #0b4bb6;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.bs3d-admin-wrap .bs3d-panel {
+  position: relative;
+  z-index: 1;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--bs3d-border);
+  border-radius: var(--bs3d-radius-md);
+  background: var(--bs3d-surface);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--bs3d-shadow-soft);
+}
+
+.bs3d-admin-wrap .notice {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--bs3d-radius-sm);
+  border: 1px solid var(--bs3d-border);
+  box-shadow: var(--bs3d-shadow-soft);
+}
+
+.bs3d-admin-wrap h2,
+#bs3d-composer-root h3 {
+  margin: 0 0 12px;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+}
+
+.bs3d-admin-wrap h2 {
+  font-size: 18px;
+}
+
+#bs3d-composer-root h3 {
+  font-size: 18px;
+}
+
+.bs3d-admin-wrap h4,
+#bs3d-composer-root h4 {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.bs3d-admin-wrap p.description,
+#bs3d-composer-root p.description {
+  color: var(--bs3d-text-muted);
+}
+
+.bs3d-admin-wrap input[type="text"],
+.bs3d-admin-wrap input[type="number"],
+.bs3d-admin-wrap input[type="url"],
+.bs3d-admin-wrap input[type="search"],
+.bs3d-admin-wrap input[type="password"],
+.bs3d-admin-wrap select,
+#bs3d-composer-root input[type="text"],
+#bs3d-composer-root input[type="number"],
+#bs3d-composer-root input[type="url"],
+#bs3d-composer-root input[type="search"],
+#bs3d-composer-root input[type="password"],
+#bs3d-composer-root select,
+#bs3d-composer-root input[type="color"] {
+  border: 1px solid var(--bs3d-border);
+  border-radius: 12px;
+  min-height: 38px;
+  padding: 6px 11px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--bs3d-text-main);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.bs3d-admin-wrap input:focus,
+.bs3d-admin-wrap select:focus,
+#bs3d-composer-root input:focus,
+#bs3d-composer-root select:focus {
+  border-color: rgba(10, 132, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
+  outline: none;
+}
+
+.bs3d-admin-wrap .button,
+#bs3d-composer-root .button {
+  border-radius: 999px;
+  border: 1px solid rgba(10, 132, 255, 0.35);
+  min-height: 36px;
+  padding: 0 16px;
+  font-weight: 600;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(238, 245, 255, 0.94));
+  color: #0b4bb6;
+  box-shadow: 0 5px 14px rgba(10, 132, 255, 0.15);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.bs3d-admin-wrap .button:hover,
+#bs3d-composer-root .button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(10, 132, 255, 0.2);
+}
+
+.bs3d-admin-wrap .button.button-primary,
+#bs3d-composer-root .button.button-primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, #0a84ff, #12b5cb);
+  color: #fff;
+}
+
+.bs3d-admin-wrap .button.button-secondary,
+#bs3d-composer-root .button.button-secondary {
+  border-color: rgba(15, 23, 42, 0.15);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(244, 247, 252, 0.95));
+  color: #1e293b;
+}
+
+.bs3d-admin-wrap .button:active,
+#bs3d-composer-root .button:active {
+  transform: translateY(0);
+}
+
+.bs3d-admin-wrap .submit .button-primary {
+  min-height: 42px;
+  padding: 0 20px;
+  font-size: 14px;
+}
+
+.bs3d-admin-wrap .form-table {
+  margin-top: 10px;
+}
+
+.bs3d-admin-wrap .form-table th {
+  color: var(--bs3d-text-main);
+  font-weight: 650;
+  width: 220px;
+}
+
+.bs3d-admin-wrap .form-table td {
+  color: var(--bs3d-text-muted);
+}
+
+.bs3d-admin-wrap .form-table tr {
+  border-bottom: 1px dashed rgba(15, 23, 42, 0.08);
+}
+
+.bs3d-admin-wrap .form-table tr:last-child {
+  border-bottom: 0;
+}
+
+.bs3d-status-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 14px;
-  margin: 16px 0 24px;
+  margin: 0;
 }
 
 .bs3d-status-card {
-  background: #fff;
-  border: 1px solid #ccd0d4;
-  border-left-width: 4px;
-  border-radius: 8px;
-  padding: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--bs3d-border);
+  border-left-width: 5px;
+  border-radius: 14px;
+  padding: 14px 14px 15px;
+  box-shadow: var(--bs3d-shadow-soft);
 }
 
 .bs3d-status-card h3 {
   margin: 0 0 8px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .bs3d-status-card p {
   margin: 0;
-  color: #2c3338;
+  color: var(--bs3d-text-muted);
 }
 
 .bs3d-status-ok {
-  border-left-color: #1f9a48;
+  border-left-color: var(--bs3d-success);
 }
 
 .bs3d-status-warn {
-  border-left-color: #dba617;
+  border-left-color: var(--bs3d-warning);
+}
+
+.bs3d-status-error {
+  border-left-color: var(--bs3d-error);
 }
 
 .bs3d-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin: 12px 0 16px;
+  margin: 12px 0 0;
 }
 
 .bs3d-filter-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0 14px;
+  gap: 9px;
+  margin: 4px 0 12px;
 }
 
 .bs3d-filter-form input,
 .bs3d-filter-form select {
-  min-width: 140px;
+  min-width: 145px;
+}
+
+.bs3d-log-table {
+  border: 1px solid var(--bs3d-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.bs3d-log-table thead th {
+  background: rgba(10, 132, 255, 0.08);
+  color: #0f172a;
+  border-bottom: 1px solid var(--bs3d-border);
+}
+
+.bs3d-log-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.bs3d-log-table tbody tr:nth-child(odd) {
+  background: rgba(248, 251, 255, 0.72);
 }
 
 .bs3d-log-table code {
   display: inline-block;
   max-width: 380px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.06);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -60,48 +322,57 @@
 .bs3d-level {
   display: inline-block;
   border-radius: 999px;
-  padding: 2px 10px;
+  padding: 3px 10px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .bs3d-level-info {
-  background: #e8f4ff;
-  color: #06518a;
+  background: rgba(10, 132, 255, 0.12);
+  color: #08479f;
 }
 
 .bs3d-level-warn {
-  background: #fff6de;
-  color: #8a6607;
+  background: rgba(255, 170, 0, 0.16);
+  color: #8a5a00;
 }
 
 .bs3d-level-error {
-  background: #ffe9e9;
-  color: #9b111e;
+  background: rgba(214, 67, 102, 0.16);
+  color: #8f1634;
+}
+
+#bs3d-composer-root {
+  margin-top: 4px;
+  padding: 20px;
 }
 
 .bs3d-composer-grid {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(330px, 1fr);
+  gap: 20px;
 }
 
 .bs3d-composer-main {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .bs3d-model-card {
-  border: 1px solid #d0d7de;
-  border-radius: 8px;
-  padding: 12px;
-  background: #fff;
+  border: 1px solid var(--bs3d-border);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--bs3d-shadow-soft);
 }
 
 .bs3d-model-card h4 {
-  margin-top: 0;
-  margin-bottom: 10px;
+  margin: 0 0 10px;
 }
 
 .bs3d-three-col {
@@ -111,10 +382,12 @@
 }
 
 .bs3d-three-col label,
-.bs3d-slider-row label {
-  font-weight: 600;
+.bs3d-slider-row label,
+.bs3d-model-card > p > label {
+  font-weight: 650;
   display: block;
   margin-bottom: 4px;
+  color: #334155;
 }
 
 .bs3d-three-col input[type="number"],
@@ -125,7 +398,18 @@
 .bs3d-checkbox-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.bs3d-checkbox-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--bs3d-border);
+  background: rgba(255, 255, 255, 0.84);
 }
 
 .bs3d-url-row {
@@ -143,23 +427,50 @@
 
 .bs3d-slider-row input[type="range"] {
   width: 100%;
+  accent-color: var(--bs3d-accent);
 }
 
 .bs3d-composer-preview {
   position: sticky;
   top: 28px;
   align-self: start;
-  border: 1px solid #d0d7de;
-  border-radius: 8px;
-  background: #fff;
-  padding: 12px;
+  border: 1px solid var(--bs3d-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--bs3d-shadow-soft);
+  padding: 14px;
+}
+
+.bs3d-composer-preview h3 {
+  margin-bottom: 12px;
 }
 
 .bs3d-admin-preview-banner {
-  min-height: 280px;
+  min-height: 300px;
+}
+
+.bs3d-composer-main > p,
+.bs3d-composer-main > h3,
+.bs3d-composer-main > .bs3d-three-col,
+.bs3d-composer-main > .bs3d-slider-row,
+.bs3d-composer-main > .bs3d-checkbox-row {
+  padding: 0 2px;
 }
 
 @media (max-width: 1200px) {
+  .bs3d-admin-wrap .bs3d-page-shell {
+    padding: 18px;
+  }
+
+  .bs3d-admin-wrap .bs3d-page-header {
+    flex-direction: column;
+  }
+
+  .bs3d-admin-wrap .bs3d-version-pill {
+    align-self: flex-start;
+  }
+
   .bs3d-composer-grid {
     grid-template-columns: 1fr;
   }
@@ -169,12 +480,27 @@
   }
 }
 
-@media (max-width: 780px) {
+@media (max-width: 860px) {
+  #bs3d-composer-root {
+    padding: 14px;
+  }
+
   .bs3d-three-col {
     grid-template-columns: 1fr;
   }
 
   .bs3d-slider-row {
     grid-template-columns: 1fr;
+  }
+
+  .bs3d-filter-form {
+    flex-direction: column;
+  }
+
+  .bs3d-filter-form input,
+  .bs3d-filter-form select,
+  .bs3d-filter-form .button {
+    width: 100%;
+    max-width: none;
   }
 }

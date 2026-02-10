@@ -399,6 +399,7 @@ Checkpoint storage policy note (effective 2026-02-09):
 - `beastside-3d-hero-banner/includes/class-bs3d-data-transfer.php`
 - `beastside-3d-hero-banner/includes/class-bs3d-plugin.php`
 - `beastside-3d-hero-banner/beastside-3d-hero-banner.php`
+- `beastside-3d-hero-banner/project-state/RELEASE_CHECKLIST_v0.2.5.md`
 - `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
 - `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
 - `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
@@ -472,4 +473,31 @@ Checkpoint storage policy note (effective 2026-02-09):
 - `next_actions`:
 - Complete unresolved validation blockers in live WP and promote remaining eligible rows to `validated`.
 - Once blocker list is clear, mark latest validation checkpoint as stable and continue with admin-first UI modernization.
+
+---
+
+## Entry 018
+- `checkpoint_id`: 20260210-061745-admin-ui-bubble-refresh-v1
+- `date_utc`: 2026-02-10T06:17:45Z
+- `request`: Continue the plan by moving into the queued admin-first modernization phase and deliver a more modern "apple bubble" interface direction.
+- `decision`: Applied a scoped admin UI refresh across Settings, Diagnostics, and Banner Composer using glass/bubble styling tokens, rounded panel shells, updated page headers/version pills, refined input/button treatments, and responsive layout polish. Functional logic and data flows were intentionally unchanged.
+- `files`:
+- `beastside-3d-hero-banner/assets/css/admin.css`
+- `beastside-3d-hero-banner/includes/class-bs3d-plugin.php`
+- `beastside-3d-hero-banner/beastside-3d-hero-banner.php`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-061745-admin-ui-bubble-refresh-v1/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-061745-admin-ui-bubble-refresh-v1/restore.md`
+- `risks`:
+- This pass is visual-only and scoped to plugin admin surfaces; extreme custom WP admin styling/plugins could still override portions of the new presentation.
+- `validation`:
+- Static verification confirms new settings/diagnostics page shell classes render from `class-bs3d-plugin.php`.
+- Static verification confirms all existing diagnostics actions/forms/filters remain unchanged.
+- Plugin version bumped to `0.2.5` for cache-busting admin CSS updates.
+- `next_actions`:
+- Capture live admin screenshots for Settings, Diagnostics, and Composer to approve visual direction.
+- After visual sign-off, proceed with the first new functional feature bundle on top of this UI baseline.
 

@@ -4,6 +4,7 @@ Latest stable checkpoint should be used for rollback unless a specific checkpoin
 
 | checkpoint_id | date_utc | change_slug | scope | summary | stable |
 |---|---|---|---|---|---|
+| 20260210-061745-admin-ui-bubble-refresh-v1 | 2026-02-10T06:17:45Z | admin-ui-bubble-refresh-v1 | incremental-change | Applied admin-first bubble/glass visual refresh to Settings, Diagnostics, and Composer; bumped plugin version to 0.2.5 for cache-busting. | no |
 | 20260210-055536-validation-pass-f022-f037 | 2026-02-10T05:55:36Z | validation-pass-f022-f037 | incremental-change | Validation hardening pass recorded live evidence for F022/F024/F031/F032/F035/F037 and added v0.2.4 release gate with explicit blockers. | no |
 | 20260210-050120-elementor-auto-stretch-height | 2026-02-10T05:01:20Z | elementor-auto-stretch-height | incremental-change | Added Elementor container auto-stretch height behavior for standard mode and ResizeObserver-driven runtime resizing. | no |
 | 20260210-010938-frontend-safe-proxy-and-fullscreen | 2026-02-10T01:09:38Z | frontend-safe-proxy-and-fullscreen | incremental-change | Added signed public model-proxy fallback for published renders and per-banner fullscreen viewport mode. | no |
