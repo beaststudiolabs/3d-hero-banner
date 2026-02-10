@@ -110,17 +110,63 @@
     return {};
   }
 
+  function normalizeModelSlot(rawSlot, fallback) {
+    var nextSlot = Number(rawSlot);
+    if (!Number.isFinite(nextSlot)) {
+      nextSlot = Number(fallback);
+    }
+    if (!Number.isFinite(nextSlot)) {
+      nextSlot = 0;
+    }
+    nextSlot = Math.round(nextSlot);
+    if (nextSlot < 0) {
+      return 0;
+    }
+    if (nextSlot > 2) {
+      return 2;
+    }
+    return nextSlot;
+  }
+
   function getModelEntries(payload) {
     var scene = getScene(payload);
     if (!Array.isArray(scene.models)) {
       return [];
     }
 
-    return scene.models
-      .slice(0, 3)
-      .filter(function (model) {
-        return model && typeof model.url === "string" && model.url.trim().length > 0;
-      });
+    var entries = [];
+    var usedSlots = {};
+
+    scene.models.forEach(function (model, modelIndex) {
+      if (entries.length >= 3) {
+        return;
+      }
+      if (!model || typeof model !== "object" || typeof model.url !== "string") {
+        return;
+      }
+      var url = model.url.trim();
+      if (!url) {
+        return;
+      }
+
+      var slot = normalizeModelSlot(model.slot, modelIndex);
+      if (usedSlots[slot]) {
+        return;
+      }
+      usedSlots[slot] = true;
+
+      entries.push(
+        Object.assign({}, model, {
+          slot: slot,
+          url: url,
+        })
+      );
+    });
+
+    entries.sort(function (left, right) {
+      return normalizeModelSlot(left.slot, 0) - normalizeModelSlot(right.slot, 0);
+    });
+    return entries;
   }
 
   function getLocationHref() {
@@ -535,6 +581,8 @@
     var helperGroup = null;
     var helperPointLights = [];
     var modelRuntimeTargets = [];
+    var modelPickMarkers = [];
+    var editorPickTargets = [];
     var ambientHelper = null;
     var cameraHelper = null;
     var gridHelper = null;
@@ -556,6 +604,9 @@
     var pointerMoveHandler = null;
     var pointerEnterHandler = null;
     var pointerLeaveHandler = null;
+    var editorPickHandler = null;
+    var editorPickRaycaster = null;
+    var editorPickPointer = null;
     var editorBridgeHandler = null;
     var timeoutHandle = 0;
     var intersectionObserver = null;
@@ -901,6 +952,11 @@
         pointerLeaveHandler = null;
       }
 
+      if (editorPickHandler && renderer && renderer.domElement) {
+        renderer.domElement.removeEventListener("pointerdown", editorPickHandler);
+        editorPickHandler = null;
+      }
+
       if (editorBridgeHandler) {
         window.removeEventListener("bs3d:editor-bridge", editorBridgeHandler);
         editorBridgeHandler = null;
@@ -934,6 +990,8 @@
       helperGroup = null;
       helperPointLights = [];
       modelRuntimeTargets = [];
+      modelPickMarkers = [];
+      editorPickTargets = [];
       ambientHelper = null;
       cameraHelper = null;
       gridHelper = null;
@@ -946,6 +1004,8 @@
       hemisphereLight = null;
       directionalLight = null;
       runtimePointLights = [];
+      editorPickRaycaster = null;
+      editorPickPointer = null;
       loader = null;
       dracoLoader = null;
     }
@@ -1116,6 +1176,123 @@
       return helper;
     }
 
+    function createModelPickMarker(THREE) {
+      var group = new THREE.Group();
+      var ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.16, 0.012, 10, 28),
+        new THREE.MeshBasicMaterial({
+          color: 0xc8d7ff,
+          transparent: true,
+          opacity: 0.68,
+          depthWrite: false,
+        })
+      );
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+
+      var core = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08, 14, 14),
+        new THREE.MeshBasicMaterial({
+          color: 0xeef4ff,
+          transparent: true,
+          opacity: 0.3,
+          depthWrite: false,
+        })
+      );
+      group.add(core);
+
+      return {
+        group: group,
+        ring: ring,
+        core: core,
+      };
+    }
+
+    function registerEditorPickTarget(object, targetName) {
+      if (!object || !targetName) {
+        return;
+      }
+      object.userData = object.userData || {};
+      object.userData.bs3dTarget = targetName;
+      editorPickTargets.push(object);
+    }
+
+    function getPickedTargetName(object) {
+      var current = object || null;
+      while (current) {
+        if (current.userData && typeof current.userData.bs3dTarget === "string" && current.userData.bs3dTarget) {
+          return current.userData.bs3dTarget;
+        }
+        current = current.parent || null;
+      }
+      return "";
+    }
+
+    function dispatchEditorTargetPicked(targetName) {
+      if (!editorState.active || !targetName) {
+        return;
+      }
+      window.dispatchEvent(
+        new CustomEvent("bs3d:editor-target-picked", {
+          detail: {
+            container: container,
+            target: targetName,
+          },
+        })
+      );
+    }
+
+    function setupEditorTargetPicker(THREE) {
+      if (!editorState.active || !renderer || !renderer.domElement || !camera || editorPickHandler) {
+        return;
+      }
+      editorPickRaycaster = new THREE.Raycaster();
+      editorPickPointer = new THREE.Vector2();
+      editorPickHandler = function (event) {
+        if (!editorState.active || !editorPickRaycaster || !editorPickPointer || !renderer || !camera) {
+          return;
+        }
+        if (transformControls && transformControls.dragging) {
+          return;
+        }
+        if (typeof event.button === "number" && event.button !== 0) {
+          return;
+        }
+        if (!editorPickTargets.length) {
+          return;
+        }
+
+        var rect = renderer.domElement.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+          return;
+        }
+
+        editorPickPointer.set(
+          ((event.clientX - rect.left) / rect.width) * 2 - 1,
+          -(((event.clientY - rect.top) / rect.height) * 2 - 1)
+        );
+        editorPickRaycaster.setFromCamera(editorPickPointer, camera);
+        var intersections = editorPickRaycaster.intersectObjects(editorPickTargets, true);
+        if (!intersections.length) {
+          return;
+        }
+
+        var pickedName = normalizeEditorMode(getPickedTargetName(intersections[0].object));
+        if (!pickedName || pickedName === "none") {
+          return;
+        }
+
+        if (editorState.mode !== pickedName) {
+          editorState.mode = pickedName;
+          dispatchEditorTargetPicked(pickedName);
+          syncEditorHelpers(THREE);
+          syncHelperStyles();
+        }
+        event.preventDefault();
+      };
+      renderer.domElement.addEventListener("pointerdown", editorPickHandler);
+    }
+
     function ensureSceneAmbientPosition() {
       if (!sceneConfig.lighting || typeof sceneConfig.lighting !== "object") {
         sceneConfig.lighting = {};
@@ -1143,8 +1320,12 @@
 
       var activeMode = editorState.mode;
       var activePointIndex = -1;
+      var activeModelSlot = -1;
       if (activeMode.indexOf("pointLight") === 0) {
         activePointIndex = Number(activeMode.replace("pointLight", "")) - 1;
+      }
+      if (activeMode.indexOf("model") === 0) {
+        activeModelSlot = Number(activeMode.replace("model", "")) - 1;
       }
 
       if (cameraHelper && cameraHelper.frame && cameraHelper.frame.material) {
@@ -1160,6 +1341,20 @@
           return;
         }
         entry.ring.material.color.set(activePointIndex === index ? 0x99f6d5 : 0xffb58a);
+        if (entry.sphere && entry.sphere.material) {
+          entry.sphere.material.opacity = activePointIndex === index ? 0.45 : 0.24;
+        }
+      });
+
+      modelRuntimeTargets.forEach(function (entry) {
+        if (!entry || !entry.marker || !entry.marker.ring || !entry.marker.ring.material) {
+          return;
+        }
+        var isActiveModel = activeModelSlot === entry.slot;
+        entry.marker.ring.material.color.set(isActiveModel ? 0x99f6d5 : 0xc8d7ff);
+        if (entry.marker.core && entry.marker.core.material) {
+          entry.marker.core.material.opacity = isActiveModel ? 0.52 : 0.3;
+        }
       });
     }
 
@@ -1172,9 +1367,12 @@
       helperGroup.name = "bs3d-editor-helpers";
       helperPointLights = [];
       modelRuntimeTargets = [];
+      modelPickMarkers = [];
+      editorPickTargets = [];
 
       ambientHelper = createAmbientHelper(THREE);
       helperGroup.add(ambientHelper);
+      registerEditorPickTarget(ambientHelper, "ambient");
 
       cameraHelper = buildCameraFrameHelper(THREE);
       helperGroup.add(cameraHelper.group);
@@ -1201,6 +1399,7 @@
 
       runtimePointLights.forEach(function (_, index) {
         var helper = createPointLightHelper(THREE);
+        registerEditorPickTarget(helper.sphere, "pointLight" + String(index + 1));
         helperPointLights.push(helper);
         helperGroup.add(helper.group);
       });
@@ -1247,6 +1446,7 @@
       ensureEditorCoordinateLabel();
       syncEditorHelpers(THREE);
       syncHelperStyles();
+      setupEditorTargetPicker(THREE);
     }
 
     function syncEditorHelpers(THREE) {
@@ -1276,7 +1476,10 @@
         var lightConfig = pointLights[index] || {};
         var position = ensureVector3(THREE, lightConfig.position, { x: 0, y: 3, z: 3 });
         helper.group.position.copy(position);
-        helper.group.visible = !!lightConfig.enabled;
+        helper.group.visible = true;
+        if (helper.ring) {
+          helper.ring.visible = !!lightConfig.enabled;
+        }
         var color = lightConfig.color || "#ffd2ad";
         try {
           helper.ring.material.color.set(color);
@@ -1288,13 +1491,21 @@
       });
 
       modelRuntimeTargets.forEach(function (entry) {
-        if (!entry || !entry.root || !sceneConfig.models || !sceneConfig.models[entry.index]) {
+        if (!entry || !entry.root) {
           return;
         }
-        var position = sceneConfig.models[entry.index].position || {};
+        var modelConfig = getSceneModelBySlot(entry.slot);
+        if (!modelConfig) {
+          return;
+        }
+        var position = modelConfig.position || {};
         entry.root.position.set(getNumber(position.x, 0), getNumber(position.y, 0), getNumber(position.z, 0));
+        if (entry.marker && entry.marker.group) {
+          entry.marker.group.position.copy(entry.root.position);
+        }
       });
 
+      updateEditorGridFloor(THREE);
       syncSpatialAidVisibility();
       syncTransformTarget(THREE);
     }
@@ -1365,6 +1576,62 @@
 
       sceneConfig.lighting.pointLights = sceneConfig.lighting.pointLights.slice(0, 3);
       return sceneConfig.lighting.pointLights;
+    }
+
+    function getSceneModelBySlot(slot) {
+      if (!Array.isArray(sceneConfig.models)) {
+        return null;
+      }
+      var normalizedSlot = normalizeModelSlot(slot, 0);
+      for (var index = 0; index < sceneConfig.models.length; index += 1) {
+        var model = sceneConfig.models[index];
+        if (!model || typeof model !== "object") {
+          continue;
+        }
+        var modelSlot = normalizeModelSlot(model.slot, index);
+        if (modelSlot === normalizedSlot) {
+          model.slot = modelSlot;
+          return model;
+        }
+      }
+      return null;
+    }
+
+    function updateEditorGridFloor(THREE) {
+      if (!editorState.active || !gridHelper) {
+        return;
+      }
+      var floorY = 0;
+      var minModelY = Number.POSITIVE_INFINITY;
+
+      modelRuntimeTargets.forEach(function (entry) {
+        if (!entry || !entry.root) {
+          return;
+        }
+
+        try {
+          var bounds = new THREE.Box3().setFromObject(entry.root);
+          if (Number.isFinite(bounds.min.y)) {
+            minModelY = Math.min(minModelY, bounds.min.y);
+            return;
+          }
+        } catch (error) {
+          // Fall back to root position when bounds cannot be computed.
+        }
+
+        if (entry.root.position) {
+          minModelY = Math.min(minModelY, getNumber(entry.root.position.y, 0));
+        }
+      });
+
+      if (Number.isFinite(minModelY)) {
+        floorY = clamp(minModelY, -50, 50);
+      }
+
+      gridHelper.position.y = floorY;
+      if (axesHelper) {
+        axesHelper.position.y = floorY;
+      }
     }
 
     function syncSpatialAidVisibility() {
@@ -1512,8 +1779,11 @@
         }
       }
 
-      if (target.type === "model" && Array.isArray(sceneConfig.models) && sceneConfig.models[target.index]) {
-        return ensureVector3(THREE, sceneConfig.models[target.index].position, { x: 0, y: 0, z: 0 });
+      if (target.type === "model") {
+        var model = getSceneModelBySlot(target.index);
+        if (model) {
+          return ensureVector3(THREE, model.position, { x: 0, y: 0, z: 0 });
+        }
       }
 
       return null;
@@ -1546,8 +1816,12 @@
         return;
       }
 
-      if (target.type === "model" && Array.isArray(sceneConfig.models) && sceneConfig.models[target.index]) {
-        sceneConfig.models[target.index].position = {
+      if (target.type === "model") {
+        var model = getSceneModelBySlot(target.index);
+        if (!model) {
+          return;
+        }
+        model.position = {
           x: getNumber(vector.x, 0),
           y: getNumber(vector.y, 0),
           z: getNumber(vector.z, 0),
@@ -1573,7 +1847,7 @@
 
     function findModelRuntimeTarget(index) {
       for (var i = 0; i < modelRuntimeTargets.length; i += 1) {
-        if (modelRuntimeTargets[i].index === index) {
+        if (modelRuntimeTargets[i].slot === index) {
           return modelRuntimeTargets[i];
         }
       }
@@ -1595,7 +1869,13 @@
 
       if (target.type === "model") {
         var modelTarget = findModelRuntimeTarget(target.index);
-        return modelTarget ? modelTarget.root : null;
+        if (!modelTarget) {
+          return null;
+        }
+        if (modelTarget.marker && modelTarget.marker.group) {
+          return modelTarget.marker.group;
+        }
+        return modelTarget.root;
       }
 
       return null;
@@ -1609,19 +1889,9 @@
       if (typeof transformControls.setDragPlaneName === "function") {
         transformControls.setDragPlaneName(editorState.plane);
       }
-      if (editorState.plane === "xz") {
-        transformControls.showX = true;
-        transformControls.showY = false;
-        transformControls.showZ = true;
-      } else if (editorState.plane === "yz") {
-        transformControls.showX = false;
-        transformControls.showY = true;
-        transformControls.showZ = true;
-      } else {
-        transformControls.showX = true;
-        transformControls.showY = true;
-        transformControls.showZ = false;
-      }
+      transformControls.showX = true;
+      transformControls.showY = true;
+      transformControls.showZ = true;
     }
 
     function syncTransformTarget(THREE) {
@@ -1906,8 +2176,10 @@
 
       var loads = modelEntries.map(function (model, index) {
         return new Promise(function (resolve, reject) {
+          var modelSlot = normalizeModelSlot(model.slot, index);
+          var modelDisplayIndex = modelSlot + 1;
           var normalized = normalizeModelUrl(model.url);
-          var proxyEnabled = canUseModelProxy(payload, index);
+          var proxyEnabled = canUseModelProxy(payload, modelSlot);
 
           function onModelLoaded(gltf, viaProxy) {
             if (disposed || !rootGroup) {
@@ -1924,10 +2196,18 @@
             applyModelTransform(root, model);
             rootGroup.add(root);
             if (editorState.active) {
+              var marker = createModelPickMarker(window.THREE);
+              marker.group.position.copy(root.position);
+              marker.group.userData.helperType = "model";
+              helperGroup.add(marker.group);
+              registerEditorPickTarget(marker.core, "model" + String(modelDisplayIndex));
+
               modelRuntimeTargets.push({
-                index: index,
+                slot: modelSlot,
                 root: root,
+                marker: marker,
               });
+              modelPickMarkers.push(marker);
               syncEditorHelpers(window.THREE);
             }
             state.modelsLoaded += 1;
@@ -1939,9 +2219,9 @@
                 payload,
                 "info",
                 "model_proxy_success",
-                "Model #" + (index + 1) + " loaded via model proxy fallback",
+                "Model #" + modelDisplayIndex + " loaded via model proxy fallback",
                 {
-                  modelIndex: index + 1,
+                  modelIndex: modelDisplayIndex,
                   modelUrlOriginal: normalized.modelUrlOriginal || "",
                   modelUrlResolved: normalized.modelUrlResolved || "",
                   normalizationRule: normalized.normalizationRule || "none",
@@ -1959,17 +2239,17 @@
               payload,
               "error",
               classified.code,
-              "Model #" + (index + 1) + " load failed",
+              "Model #" + modelDisplayIndex + " load failed",
               Object.assign(
                 {
-                  modelIndex: index + 1,
+                  modelIndex: modelDisplayIndex,
                   viaProxy: !!viaProxy,
                 },
                 classified.meta
               ),
               false
             );
-            reject(new Error("Model #" + (index + 1) + " failed: " + classified.message));
+            reject(new Error("Model #" + modelDisplayIndex + " failed: " + classified.message));
           }
 
           function attemptProxyLoad(proxyUrl) {
@@ -2096,16 +2376,16 @@
                   var proxyRetryUrl = buildModelProxyUrl(
                     payload,
                     normalized.modelUrlResolved || normalized.modelUrlOriginal || targetUrl,
-                    index
+                    modelSlot
                   );
                   if (proxyRetryUrl) {
                     emitDiagnostic(
                       payload,
                       "warn",
                       "model_proxy_retry",
-                      "Retrying model #" + (index + 1) + " through model proxy",
+                      "Retrying model #" + modelDisplayIndex + " through model proxy",
                       {
-                        modelIndex: index + 1,
+                        modelIndex: modelDisplayIndex,
                         modelUrlOriginal: normalized.modelUrlOriginal || "",
                         modelUrlResolved: normalized.modelUrlResolved || "",
                         normalizationRule: normalized.normalizationRule || "none",
@@ -2128,16 +2408,16 @@
               var proxyMixedContentUrl = buildModelProxyUrl(
                 payload,
                 normalized.modelUrlResolved || normalized.modelUrlOriginal || "",
-                index
+                modelSlot
               );
               if (proxyMixedContentUrl) {
                 emitDiagnostic(
                   payload,
                   "warn",
                   "model_proxy_retry",
-                  "Retrying mixed-content model #" + (index + 1) + " through model proxy",
+                  "Retrying mixed-content model #" + modelDisplayIndex + " through model proxy",
                   {
-                    modelIndex: index + 1,
+                    modelIndex: modelDisplayIndex,
                     modelUrlOriginal: normalized.modelUrlOriginal || "",
                     modelUrlResolved: normalized.modelUrlResolved || "",
                     normalizationRule: normalized.normalizationRule || "none",
@@ -2154,9 +2434,9 @@
               payload,
               "error",
               normalized.code || "unsupported_or_not_direct_url",
-              "Model #" + (index + 1) + " URL rejected: " + (normalized.message || "Invalid URL"),
+              "Model #" + modelDisplayIndex + " URL rejected: " + (normalized.message || "Invalid URL"),
               {
-                modelIndex: index + 1,
+                modelIndex: modelDisplayIndex,
                 modelUrlOriginal: normalized.modelUrlOriginal || "",
                 modelUrlResolved: normalized.modelUrlResolved || "",
                 normalizationRule: normalized.normalizationRule || "none",
@@ -2164,7 +2444,7 @@
               },
               false
             );
-            reject(new Error("Model #" + (index + 1) + " failed: " + (normalized.message || "Invalid model URL")));
+            reject(new Error("Model #" + modelDisplayIndex + " failed: " + (normalized.message || "Invalid model URL")));
             return;
           }
 

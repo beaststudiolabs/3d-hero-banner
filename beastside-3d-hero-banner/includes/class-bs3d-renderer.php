@@ -439,11 +439,18 @@ class BS3D_Renderer {
 			if ( ! is_array( $model ) || empty( $model['url'] ) ) {
 				continue;
 			}
+			$slot = isset( $model['slot'] ) ? (int) $model['slot'] : (int) $model_index;
+			if ( $slot < 0 || $slot > 2 ) {
+				$slot = (int) $model_index;
+			}
+			if ( $slot < 0 || $slot > 2 ) {
+				continue;
+			}
 			$url = self::sanitize_model_proxy_url( (string) $model['url'] );
 			if ( empty( $url ) ) {
 				continue;
 			}
-			$signatures[ (string) $model_index ] = self::sign_public_proxy_request( $banner_id, $model_index, $url );
+			$signatures[ (string) $slot ] = self::sign_public_proxy_request( $banner_id, $slot, $url );
 		}
 
 		return $signatures;
@@ -464,13 +471,18 @@ class BS3D_Renderer {
 
 		$scene  = $banner_data['scene'];
 		$models = isset( $scene['models'] ) && is_array( $scene['models'] ) ? $scene['models'] : array();
-		if ( ! array_key_exists( $model_index, $models ) || ! is_array( $models[ $model_index ] ) ) {
-			return '';
+		foreach ( $models as $array_index => $model ) {
+			if ( ! is_array( $model ) ) {
+				continue;
+			}
+			$slot = isset( $model['slot'] ) ? (int) $model['slot'] : (int) $array_index;
+			if ( $slot !== (int) $model_index ) {
+				continue;
+			}
+			$url = isset( $model['url'] ) ? (string) $model['url'] : '';
+			return self::sanitize_model_proxy_url( $url );
 		}
-
-		$model = $models[ $model_index ];
-		$url   = isset( $model['url'] ) ? (string) $model['url'] : '';
-		return self::sanitize_model_proxy_url( $url );
+		return '';
 	}
 
 	/**

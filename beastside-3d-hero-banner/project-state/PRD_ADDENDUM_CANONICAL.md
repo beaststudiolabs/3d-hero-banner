@@ -232,6 +232,10 @@ This document is the canonical source of approved requirements and acceptance cr
 34. Admin preview provides thin grid overlay (default ON), axes toggle, and selected-target floating XYZ label toggle without persisting these UI states into scene payload.
 35. Drag updates in admin preview mutate runtime + form coordinates directly without full preview re-bootstrap blink during active drag.
 36. Transform-controls or helper initialization errors in admin preview must not block core model loading/rendering; runtime must continue with gizmos disabled and diagnostics warning logged.
+37. Model slot identity must be preserved with `models[].slot` so `model1/2/3` edit targets remain stable even when middle model slots are empty.
+38. Admin preview must support direct click-selection of ambient, point-light, and model targets via center markers while keeping the edit-mode dropdown as a fallback path.
+39. Selected target gizmo must expose clear RGB axes with axis labels (`X`, `Y`, `Z`) and apply true single-axis movement when dragging each axis handle.
+40. Admin preview grid/axes helpers must exist in 3D scene space and auto-track the model floor baseline so placement cues align with object depth/height context.
 
 ## Non-Negotiable Defaults
 - Debug mode defaults ON.
@@ -317,3 +321,4 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260210-105945-interactive-lighting-lens-layout-v1 | 2026-02-10T10:59:45Z | Added scene schema v2 (lens camera + ambient toggle + point lights), admin-only interactive helper drag placement in preview, and composer 3-row UX reflow (preview/camera-lighting, models, remaining settings). |
 | 20260210-122522-ambient-gizmo-grid-model-drag-v1 | 2026-02-10T12:25:22Z | Upgraded to scene schema v3 with `ambientPosition`, switched ambient runtime to hemisphere light, added TransformControls-based admin drag for ambient/point/model targets, and added admin-preview grid/axes/selected XYZ label toggles with no public helper rendering. |
 | 20260210-135027-model-visibility-transformcontrols-hotfix | 2026-02-10T13:50:27Z | Fixed model-visibility regression by replacing legacy TransformControls constructor style with class-based inheritance compatible with Three.js r146 and guarding transform-controls init so render/model load continues if gizmo setup fails; bumped version to 0.2.8. |
+| 20260210-145332-direct-pick-axis-gizmo-model3-fix | 2026-02-10T14:53:32Z | Preserved stable `models[].slot` identity across composer/runtime/proxy flows, fixed Model 3 targeting in sparse-slot scenes, added direct marker click target-picking, upgraded gizmo axis constraints with RGB labels, and added auto-floor 3D grid/axes alignment; bumped version to 0.2.9. |

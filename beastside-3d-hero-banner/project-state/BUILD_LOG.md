@@ -704,3 +704,42 @@ Checkpoint storage policy note (effective 2026-02-09):
 - `next_actions`:
 - Re-test admin preview model visibility and confirm `Model Status` increments above `0/n`.
 - Verify drag still works for available targets and confirm fallback warning only appears when transform-controls init actually fails.
+
+---
+
+## Entry 025
+- `checkpoint_id`: 20260210-145332-direct-pick-axis-gizmo-model3-fix
+- `date_utc`: 2026-02-10T14:53:32Z
+- `request`: Fix Model 3 drag reliability and implement direct click-select gizmo UX with RGB axis movement, 3D floor-aligned grid, and fallback dropdown sync.
+- `decision`: Added stable model slot mapping (`models[].slot`) end-to-end across admin composer payload, scene sanitization, renderer runtime targeting, and public proxy signature/model resolution. Upgraded admin preview interaction so selectable center markers can be clicked directly to pick `ambient`, `pointLight1-3`, or `model1-3`, auto-syncing fallback dropdown mode via bridge event. Enhanced TransformControls shim with true axis-constrained drag math for X/Y/Z handles, added axis labels, and kept center-handle free translation behavior. Added auto-floor 3D helper positioning so grid/axes follow scene placement baseline from loaded model bounds.
+- `compact_context`:
+- `stable_checkpoint`: `20260209-111549-qa-and-release-docs`
+- `branch_policy`: `beta-updates` remains the active implementation branch.
+- `next_phase_objective`: Live WP validation for direct pick UX, Model 3 drag reliability (including sparse slot scenarios), and gizmo/grid usability.
+- `acceptance_gate`: Model 3 must drag reliably, direct marker click must select targets without dropdown dependency, and RGB axis handles must constrain motion correctly.
+- `files`:
+- `beastside-3d-hero-banner/assets/js/admin-composer.js`
+- `beastside-3d-hero-banner/assets/js/frontend.js`
+- `beastside-3d-hero-banner/assets/vendor/three/TransformControls.js`
+- `beastside-3d-hero-banner/includes/class-bs3d-banner-post-type.php`
+- `beastside-3d-hero-banner/includes/class-bs3d-renderer.php`
+- `beastside-3d-hero-banner/beastside-3d-hero-banner.php`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-145332-direct-pick-axis-gizmo-model3-fix/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-145332-direct-pick-axis-gizmo-model3-fix/restore.md`
+- `risks`:
+- TransformControls remains a local compatibility shim and should be rechecked whenever Three.js vendor is upgraded.
+- `php -l` could not be executed in this environment because PHP CLI is unavailable.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- `node --check beastside-3d-hero-banner/assets/js/admin-composer.js`: pass.
+- `node --check beastside-3d-hero-banner/assets/vendor/three/TransformControls.js`: pass.
+- Static verification confirms slot-aware public proxy signature mapping and slot-aware model URL resolution.
+- Static verification confirms plugin version bumped to `0.2.9` for frontend/vendor asset cache-busting.
+- `next_actions`:
+- Live test direct marker click selection (ambient/point/model) and verify edit-mode dropdown auto-sync.
+- Validate Model 3 drag with all models populated and with sparse-slot scenario (Model 2 empty, Model 3 present).
+- Confirm frontend published rendering remains helper-free and unaffected.

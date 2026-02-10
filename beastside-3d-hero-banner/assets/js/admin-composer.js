@@ -98,6 +98,7 @@
       }
 
       models.push({
+        slot: i,
         url: url,
         position: {
           x: getNumber(prefix + "[position][x]", 0),
@@ -438,6 +439,21 @@
       }
 
       updateHiddenScene(collectSceneConfig());
+    });
+
+    window.addEventListener("bs3d:editor-target-picked", function (event) {
+      var detail = event && event.detail ? event.detail : null;
+      if (!detail || detail.container !== previewBanner) {
+        return;
+      }
+
+      var nextMode = normalizeEditMode(detail.target || "none");
+      var modeField = getField("bs3d_admin_edit_mode");
+      if (modeField) {
+        modeField.value = nextMode;
+      }
+      editorBridgeState.editMode = nextMode;
+      dispatchEditorBridge();
     });
   }
 

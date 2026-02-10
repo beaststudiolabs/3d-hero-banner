@@ -113,9 +113,10 @@ class BS3D_Banner_Post_Type {
 		$output                     = $defaults;
 		$output['sceneSchemaVersion'] = 3;
 
-		$models = array();
+		$models      = array();
+		$used_slots  = array();
 		if ( ! empty( $scene['models'] ) && is_array( $scene['models'] ) ) {
-			foreach ( $scene['models'] as $model ) {
+			foreach ( $scene['models'] as $model_index => $model ) {
 				if ( count( $models ) >= 3 ) {
 					break;
 				}
@@ -128,7 +129,25 @@ class BS3D_Banner_Post_Type {
 					continue;
 				}
 
+				$slot = isset( $model['slot'] ) ? (int) $model['slot'] : (int) $model_index;
+				if ( $slot < 0 || $slot > 2 ) {
+					$slot = (int) $model_index;
+				}
+				if ( $slot < 0 || $slot > 2 || isset( $used_slots[ $slot ] ) ) {
+					for ( $fallback_slot = 0; $fallback_slot <= 2; $fallback_slot++ ) {
+						if ( ! isset( $used_slots[ $fallback_slot ] ) ) {
+							$slot = $fallback_slot;
+							break;
+						}
+					}
+				}
+				if ( $slot < 0 || $slot > 2 || isset( $used_slots[ $slot ] ) ) {
+					continue;
+				}
+				$used_slots[ $slot ] = true;
+
 				$models[] = array(
+					'slot'         => $slot,
 					'url'          => $url,
 					'position'     => array(
 						'x' => self::to_float( $model['position']['x'] ?? 0, -1000, 1000, 0 ),
@@ -151,6 +170,18 @@ class BS3D_Banner_Post_Type {
 				);
 			}
 		}
+
+		usort(
+			$models,
+			static function ( $left, $right ) {
+				$left_slot  = isset( $left['slot'] ) ? (int) $left['slot'] : 0;
+				$right_slot = isset( $right['slot'] ) ? (int) $right['slot'] : 0;
+				if ( $left_slot === $right_slot ) {
+					return 0;
+				}
+				return ( $left_slot < $right_slot ) ? -1 : 1;
+			}
+		);
 		$output['models'] = $models;
 
 		$bg = isset( $scene['background'] ) && is_array( $scene['background'] ) ? $scene['background'] : array();

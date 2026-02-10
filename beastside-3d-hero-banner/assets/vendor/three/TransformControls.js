@@ -35,6 +35,47 @@
     return handle;
   }
 
+  function buildAxisLabel(text, color, axis) {
+    if (typeof document === "undefined" || !document.createElement) {
+      var fallback = new THREE.Object3D();
+      fallback.visible = false;
+      return fallback;
+    }
+
+    var canvas = document.createElement("canvas");
+    canvas.width = 96;
+    canvas.height = 96;
+    var context = canvas.getContext("2d");
+    if (!context) {
+      var fallbackNoContext = new THREE.Object3D();
+      fallbackNoContext.visible = false;
+      return fallbackNoContext;
+    }
+
+    context.clearRect(0, 0, 96, 96);
+    context.font = "700 52px Arial";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "#ffffff";
+    context.strokeStyle = "#" + color.toString(16).padStart(6, "0");
+    context.lineWidth = 8;
+    context.strokeText(text, 48, 48);
+    context.fillText(text, 48, 48);
+
+    var texture = new THREE.CanvasTexture(canvas);
+    var material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      sizeAttenuation: false,
+    });
+    var sprite = new THREE.Sprite(material);
+    sprite.scale.set(0.16, 0.16, 0.16);
+    sprite.position.copy(axis.clone().multiplyScalar(0.98));
+    return sprite;
+  }
+
   class TransformControls extends THREE.Object3D {
     constructor(camera, domElement) {
       super();
@@ -57,18 +98,26 @@
       this._dragPlane = new THREE.Plane();
       this._dragOffset = new THREE.Vector3();
       this._dragIntersection = new THREE.Vector3();
+      this._startIntersection = new THREE.Vector3();
+      this._startPosition = new THREE.Vector3();
+      this._axisVector = new THREE.Vector3();
 
       this._gizmoRoot = new THREE.Group();
       this._axisLines = {
-        x: buildAxisLine(new THREE.Vector3(1, 0, 0), 0xff7a7a),
-        y: buildAxisLine(new THREE.Vector3(0, 1, 0), 0x8cf0b5),
-        z: buildAxisLine(new THREE.Vector3(0, 0, 1), 0x7fc9ff),
+        x: buildAxisLine(new THREE.Vector3(1, 0, 0), 0xff4b4b),
+        y: buildAxisLine(new THREE.Vector3(0, 1, 0), 0x45d16f),
+        z: buildAxisLine(new THREE.Vector3(0, 0, 1), 0x4f8cff),
       };
 
       this._handles = {
-        x: buildAxisHandle(new THREE.Vector3(1, 0, 0), 0xff8f8f, "x"),
-        y: buildAxisHandle(new THREE.Vector3(0, 1, 0), 0x9cffc2, "y"),
-        z: buildAxisHandle(new THREE.Vector3(0, 0, 1), 0x8ed4ff, "z"),
+        x: buildAxisHandle(new THREE.Vector3(1, 0, 0), 0xff5f5f, "x"),
+        y: buildAxisHandle(new THREE.Vector3(0, 1, 0), 0x52dd7a, "y"),
+        z: buildAxisHandle(new THREE.Vector3(0, 0, 1), 0x5e99ff, "z"),
+      };
+      this._axisLabels = {
+        x: buildAxisLabel("X", 0xff4b4b, new THREE.Vector3(1, 0, 0)),
+        y: buildAxisLabel("Y", 0x45d16f, new THREE.Vector3(0, 1, 0)),
+        z: buildAxisLabel("Z", 0x4f8cff, new THREE.Vector3(0, 0, 1)),
       };
 
       this._centerHandle = new THREE.Mesh(
@@ -88,6 +137,9 @@
       this._gizmoRoot.add(this._handles.x);
       this._gizmoRoot.add(this._handles.y);
       this._gizmoRoot.add(this._handles.z);
+      this._gizmoRoot.add(this._axisLabels.x);
+      this._gizmoRoot.add(this._axisLabels.y);
+      this._gizmoRoot.add(this._axisLabels.z);
       this._gizmoRoot.add(this._centerHandle);
       this.add(this._gizmoRoot);
 
@@ -167,6 +219,9 @@
       this._handles.x.visible = this.showX;
       this._handles.y.visible = this.showY;
       this._handles.z.visible = this.showZ;
+      this._axisLabels.x.visible = this.showX;
+      this._axisLabels.y.visible = this.showY;
+      this._axisLabels.z.visible = this.showZ;
     }
 
     _pointerToNdc(event) {
@@ -186,18 +241,37 @@
       return true;
     }
 
-    _configurePlane() {
+    _configurePlane(axisName) {
       if (!this.object) {
         return false;
       }
 
-      var normal;
-      if (this.dragPlaneName === "xz") {
-        normal = new THREE.Vector3(0, 1, 0);
+      var normal = new THREE.Vector3();
+      var axis = String(axisName || "all").toLowerCase();
+      if (axis === "x" || axis === "y" || axis === "z") {
+        if (!this.camera || typeof this.camera.getWorldDirection !== "function") {
+          return false;
+        }
+        this._axisVector.set(axis === "x" ? 1 : 0, axis === "y" ? 1 : 0, axis === "z" ? 1 : 0);
+        var viewDirection = new THREE.Vector3();
+        this.camera.getWorldDirection(viewDirection);
+        var helperCross = new THREE.Vector3().crossVectors(this._axisVector, viewDirection);
+        if (helperCross.lengthSq() < 1e-8) {
+          helperCross.set(0, 1, 0).cross(this._axisVector);
+          if (helperCross.lengthSq() < 1e-8) {
+            helperCross.set(0, 0, 1).cross(this._axisVector);
+          }
+        }
+        normal.crossVectors(helperCross, this._axisVector).normalize();
+        if (normal.lengthSq() < 1e-8) {
+          return false;
+        }
+      } else if (this.dragPlaneName === "xz") {
+        normal.set(0, 1, 0);
       } else if (this.dragPlaneName === "yz") {
-        normal = new THREE.Vector3(1, 0, 0);
+        normal.set(1, 0, 0);
       } else {
-        normal = new THREE.Vector3(0, 0, 1);
+        normal.set(0, 0, 1);
       }
 
       this._dragPlane.setFromNormalAndCoplanarPoint(normal, this.object.position);
@@ -221,7 +295,9 @@
         return;
       }
 
-      if (!this._configurePlane()) {
+      this.axis = intersections[0].object.userData.axis || "all";
+      if (!this._configurePlane(this.axis)) {
+        this.axis = null;
         return;
       }
 
@@ -229,7 +305,8 @@
         return;
       }
 
-      this.axis = intersections[0].object.userData.axis || "all";
+      this._startIntersection.copy(this._dragIntersection);
+      this._startPosition.copy(this.object.position);
       this._dragOffset.copy(this.object.position).sub(this._dragIntersection);
       this.dragging = true;
 
@@ -259,7 +336,13 @@
         return;
       }
 
-      this.object.position.copy(this._dragIntersection).add(this._dragOffset);
+      if (this.axis === "x" || this.axis === "y" || this.axis === "z") {
+        var delta = new THREE.Vector3().copy(this._dragIntersection).sub(this._startIntersection);
+        var travel = delta.dot(this._axisVector);
+        this.object.position.copy(this._startPosition).addScaledVector(this._axisVector, travel);
+      } else {
+        this.object.position.copy(this._dragIntersection).add(this._dragOffset);
+      }
       this.position.copy(this.object.position);
       this.dispatchEvent({ type: "change" });
       this.dispatchEvent({ type: "objectChange" });
