@@ -501,3 +501,67 @@ Checkpoint storage policy note (effective 2026-02-09):
 - Capture live admin screenshots for Settings, Diagnostics, and Composer to approve visual direction.
 - After visual sign-off, proceed with the first new functional feature bundle on top of this UI baseline.
 
+
+---
+
+## Entry 019
+- `checkpoint_id`: 20260210-082110-admin-dark-30-70-layout-v2
+- `date_utc`: 2026-02-10T08:21:10Z
+- `request`: Apply the dark glass admin refresh v2 with a 30/70 composer layout split, stronger always-visible control outlines, and a fuller live preview frame while preserving all functional behavior.
+- `decision`: Updated the admin visual system to a dark glass palette using five warm accent tokens (`#e7b357`, `#ed903a`, `#f06d2d`, `#e84f29`, `#bf291d`), tightened idle-border contrast for inputs/cards/checkbox pills, switched the composer desktop grid to 30/70 with responsive 35/65 transition and mobile stacking, and set live preview height to viewport-smart clamp sizing for full-frame visibility. Data Transfer page markup was normalized to page-shell/panel wrappers for consistent styling parity across all plugin admin surfaces.
+- `compact_context`:
+- `stable_checkpoint`: `20260209-111549-qa-and-release-docs`
+- `branch_policy`: `beta-updates` remains the active forward workstream.
+- `next_phase_objective`: Continue feature additions on top of this admin v2 baseline and validate live UX behavior in WP.
+- `acceptance_gate`: Composer split/preview visibility and outline visibility must be confirmed in live admin before promoting this checkpoint to stable.
+- `files`:
+- `beastside-3d-hero-banner/assets/css/admin.css`
+- `beastside-3d-hero-banner/includes/class-bs3d-data-transfer.php`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-082110-admin-dark-30-70-layout-v2/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-082110-admin-dark-30-70-layout-v2/restore.md`
+- `risks`:
+- Dark theme contrast can vary with third-party WP admin CSS overrides.
+- Data Transfer panel wrapper normalization is markup-level; plugin logic remains unchanged but should be sanity-checked in live admin.
+- `validation`:
+- `node --check beastside-3d-hero-banner/assets/js/frontend.js`: pass.
+- Static verification confirms existing runtime resize observer paths remain present (`ResizeObserver`, `observeResizeTargets`, `handleRuntimeResize`) and unchanged behavior-wise.
+- Static verification confirms admin token + layout selectors are present (`--bs3d-warm-*`, `grid-template-columns: minmax(280px, 30%) minmax(0, 70%)`, clamp preview height).
+- `php -l` for `class-bs3d-data-transfer.php` could not be executed in this environment because `php` CLI is not installed.
+- `next_actions`:
+- Capture live admin screenshots for Settings/Diagnostics/Composer/Data Transfer to confirm dark v2 direction and 30/70 composition readability.
+- Verify that idle outlines remain visible before focus across core controls.
+- If visual QA passes, continue with the next planned feature bundle on `beta-updates`.
+
+---
+
+## Entry 020
+- `checkpoint_id`: 20260210-085621-admin-cache-bust-hotfix
+- `date_utc`: 2026-02-10T08:56:21Z
+- `request`: User reported the new admin v2 visuals were not appearing in WordPress despite local implementation; enforce reliable asset invalidation so updated admin styles/scripts load immediately.
+- `decision`: Added file-modification-time cache-busting for `assets/css/admin.css` and `assets/js/admin-composer.js` in admin enqueue flow, and bumped plugin version to `0.2.6` to force a fresh asset URL baseline after install/update.
+- `compact_context`:
+- `stable_checkpoint`: `20260209-111549-qa-and-release-docs`
+- `branch_policy`: `beta-updates` remains active.
+- `next_phase_objective`: Re-run live admin visual QA for dark v2 after installing the 0.2.6 package.
+- `acceptance_gate`: Browser must fetch admin CSS/JS with updated query versions and display dark v2 Composer layout.
+- `files`:
+- `beastside-3d-hero-banner/includes/class-bs3d-plugin.php`
+- `beastside-3d-hero-banner/beastside-3d-hero-banner.php`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-085621-admin-cache-bust-hotfix/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260210-085621-admin-cache-bust-hotfix/restore.md`
+- `risks`:
+- If an outdated plugin zip is installed, cache-busting logic cannot apply because updated PHP is not present.
+- `validation`:
+- Static verification confirms enqueue versions now append `filemtime` for admin CSS and composer JS.
+- Static verification confirms plugin version constant updated to `0.2.6`.
+- `next_actions`:
+- Install/update plugin build containing `0.2.6`.
+- Hard refresh WP admin and confirm dark v2 styles and 30/70 Composer layout are active.

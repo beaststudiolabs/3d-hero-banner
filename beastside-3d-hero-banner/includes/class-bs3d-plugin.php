@@ -141,22 +141,26 @@ class BS3D_Plugin {
 
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 		if ( in_array( $page, array( 'bs3d-settings', 'bs3d-diagnostics' ), true ) || 'bs3d_banner' === $screen->post_type || false !== strpos( $hook_suffix, 'bs3d' ) ) {
+			$admin_css_path    = BS3D_PLUGIN_DIR . 'assets/css/admin.css';
+			$admin_css_version = file_exists( $admin_css_path ) ? BS3D_VERSION . '.' . (string) filemtime( $admin_css_path ) : BS3D_VERSION;
 			wp_enqueue_style(
 				'bs3d-admin',
 				BS3D_PLUGIN_URL . 'assets/css/admin.css',
 				array(),
-				BS3D_VERSION
+				$admin_css_version
 			);
 		}
 
 		if ( 'bs3d_banner' === $screen->post_type && in_array( $screen->base, array( 'post', 'post-new' ), true ) ) {
 			wp_enqueue_media();
 			BS3D_Renderer::enqueue_assets( true );
+			$composer_js_path    = BS3D_PLUGIN_DIR . 'assets/js/admin-composer.js';
+			$composer_js_version = file_exists( $composer_js_path ) ? BS3D_VERSION . '.' . (string) filemtime( $composer_js_path ) : BS3D_VERSION;
 			wp_enqueue_script(
 				'bs3d-admin-composer',
 				BS3D_PLUGIN_URL . 'assets/js/admin-composer.js',
 				array( 'bs3d-frontend' ),
-				BS3D_VERSION,
+				$composer_js_version,
 				true
 			);
 		}

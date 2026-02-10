@@ -43,62 +43,74 @@ class BS3D_Data_Transfer {
 		$errors   = isset( $_GET['errors'] ) ? absint( $_GET['errors'] ) : 0;
 		?>
 		<div class="wrap bs3d-admin-wrap">
-			<h1><?php esc_html_e( 'Data Transfer', 'beastside-3d-hero-banner' ); ?></h1>
-
-			<?php if ( isset( $_GET['import_done'] ) && '1' === $_GET['import_done'] ) : ?>
-				<div class="notice notice-success is-dismissible">
-					<p>
-						<?php
-						echo esc_html(
-							sprintf(
-								/* translators: 1 imported, 2 skipped, 3 errors */
-								__( 'Import complete. Imported: %1$d, Skipped: %2$d, Errors: %3$d', 'beastside-3d-hero-banner' ),
-								$imported,
-								$skipped,
-								$errors
-							)
-						);
-						?>
-					</p>
+			<div class="bs3d-page-shell bs3d-page-shell-data-transfer">
+				<div class="bs3d-page-header">
+					<div>
+						<h1><?php esc_html_e( 'Data Transfer', 'beastside-3d-hero-banner' ); ?></h1>
+						<p class="bs3d-page-subtitle"><?php esc_html_e( 'Export or import banners, templates, and plugin settings with schema-versioned package support.', 'beastside-3d-hero-banner' ); ?></p>
+					</div>
+					<span class="bs3d-version-pill"><?php echo esc_html( 'v' . BS3D_VERSION ); ?></span>
 				</div>
-			<?php endif; ?>
 
-			<h2><?php esc_html_e( 'Export', 'beastside-3d-hero-banner' ); ?></h2>
-			<div class="bs3d-actions">
-				<form method="get" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="bs3d_export_package" />
-					<input type="hidden" name="mode" value="single" />
-					<?php wp_nonce_field( 'bs3d_export_package', 'bs3d_export_nonce' ); ?>
-					<select name="banner_id">
-						<?php foreach ( $banners as $banner ) : ?>
-							<option value="<?php echo esc_attr( (string) $banner->ID ); ?>">
-								<?php echo esc_html( $banner->post_title . ' (#' . $banner->ID . ')' ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-					<button type="submit" class="button button-primary"><?php esc_html_e( 'Export Single Banner', 'beastside-3d-hero-banner' ); ?></button>
-				</form>
+				<?php if ( isset( $_GET['import_done'] ) && '1' === $_GET['import_done'] ) : ?>
+					<div class="notice notice-success is-dismissible">
+						<p>
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: 1 imported, 2 skipped, 3 errors */
+									__( 'Import complete. Imported: %1$d, Skipped: %2$d, Errors: %3$d', 'beastside-3d-hero-banner' ),
+									$imported,
+									$skipped,
+									$errors
+								)
+							);
+							?>
+						</p>
+					</div>
+				<?php endif; ?>
 
-				<form method="get" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="bs3d_export_package" />
-					<input type="hidden" name="mode" value="bulk" />
-					<?php wp_nonce_field( 'bs3d_export_package', 'bs3d_export_nonce' ); ?>
-					<button type="submit" class="button"><?php esc_html_e( 'Export Full Package', 'beastside-3d-hero-banner' ); ?></button>
-				</form>
+				<div class="bs3d-panel">
+					<h2><?php esc_html_e( 'Export', 'beastside-3d-hero-banner' ); ?></h2>
+					<div class="bs3d-actions">
+						<form method="get" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<input type="hidden" name="action" value="bs3d_export_package" />
+							<input type="hidden" name="mode" value="single" />
+							<?php wp_nonce_field( 'bs3d_export_package', 'bs3d_export_nonce' ); ?>
+							<select name="banner_id">
+								<?php foreach ( $banners as $banner ) : ?>
+									<option value="<?php echo esc_attr( (string) $banner->ID ); ?>">
+										<?php echo esc_html( $banner->post_title . ' (#' . $banner->ID . ')' ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+							<button type="submit" class="button button-primary"><?php esc_html_e( 'Export Single Banner', 'beastside-3d-hero-banner' ); ?></button>
+						</form>
+
+						<form method="get" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<input type="hidden" name="action" value="bs3d_export_package" />
+							<input type="hidden" name="mode" value="bulk" />
+							<?php wp_nonce_field( 'bs3d_export_package', 'bs3d_export_nonce' ); ?>
+							<button type="submit" class="button"><?php esc_html_e( 'Export Full Package', 'beastside-3d-hero-banner' ); ?></button>
+						</form>
+					</div>
+				</div>
+
+				<div class="bs3d-panel">
+					<h2><?php esc_html_e( 'Import', 'beastside-3d-hero-banner' ); ?></h2>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+						<input type="hidden" name="action" value="bs3d_import_package" />
+						<?php wp_nonce_field( 'bs3d_import_package', 'bs3d_import_nonce' ); ?>
+						<input type="file" name="bs3d_package_file" accept="application/json,.json" required />
+						<select name="conflict_mode">
+							<option value="skip"><?php esc_html_e( 'Skip existing by slug', 'beastside-3d-hero-banner' ); ?></option>
+							<option value="overwrite_by_slug"><?php esc_html_e( 'Overwrite existing by slug', 'beastside-3d-hero-banner' ); ?></option>
+							<option value="import_as_copy"><?php esc_html_e( 'Import as copy', 'beastside-3d-hero-banner' ); ?></option>
+						</select>
+						<button type="submit" class="button button-primary"><?php esc_html_e( 'Import Package', 'beastside-3d-hero-banner' ); ?></button>
+					</form>
+				</div>
 			</div>
-
-			<h2><?php esc_html_e( 'Import', 'beastside-3d-hero-banner' ); ?></h2>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
-				<input type="hidden" name="action" value="bs3d_import_package" />
-				<?php wp_nonce_field( 'bs3d_import_package', 'bs3d_import_nonce' ); ?>
-				<input type="file" name="bs3d_package_file" accept="application/json,.json" required />
-				<select name="conflict_mode">
-					<option value="skip"><?php esc_html_e( 'Skip existing by slug', 'beastside-3d-hero-banner' ); ?></option>
-					<option value="overwrite_by_slug"><?php esc_html_e( 'Overwrite existing by slug', 'beastside-3d-hero-banner' ); ?></option>
-					<option value="import_as_copy"><?php esc_html_e( 'Import as copy', 'beastside-3d-hero-banner' ); ?></option>
-				</select>
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Import Package', 'beastside-3d-hero-banner' ); ?></button>
-			</form>
 		</div>
 		<?php
 	}
