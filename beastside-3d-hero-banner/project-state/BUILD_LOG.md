@@ -743,3 +743,32 @@ Checkpoint storage policy note (effective 2026-02-09):
 - Live test direct marker click selection (ambient/point/model) and verify edit-mode dropdown auto-sync.
 - Validate Model 3 drag with all models populated and with sparse-slot scenario (Model 2 empty, Model 3 present).
 - Confirm frontend published rendering remains helper-free and unaffected.
+
+---
+
+## Entry 026
+- `checkpoint_id`: 20260211-010734-status-snapshot-documentation
+- `date_utc`: 2026-02-11T01:07:34Z
+- `request`: Save the status of everything completed so far via documentation.
+- `decision`: Added a consolidated status snapshot document (`CURRENT_STATUS.md`) under `project-state` summarizing branch/commit/version state, checkpoint lineage, milestone completion coverage, feature-status totals, immediate QA focus, and working branch policy. Updated project-state tracking docs and checkpoint index to preserve continuity as a docs-only checkpoint.
+- `compact_context`:
+- `stable_checkpoint`: `20260209-111549-qa-and-release-docs`
+- `branch_policy`: `beta-updates` remains the active implementation branch.
+- `next_phase_objective`: Run live WP QA pass for latest direct-pick/model-slot fixes and then proceed with queued feature/UI work.
+- `acceptance_gate`: Current status must be discoverable from project-state docs without requiring log archaeology.
+- `files`:
+- `beastside-3d-hero-banner/project-state/CURRENT_STATUS.md`
+- `beastside-3d-hero-banner/project-state/BUILD_LOG.md`
+- `beastside-3d-hero-banner/project-state/FEATURE_MATRIX.md`
+- `beastside-3d-hero-banner/project-state/PRD_ADDENDUM_CANONICAL.md`
+- `beastside-3d-hero-banner/project-state/CHECKPOINT_INDEX.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260211-010734-status-snapshot-documentation/diff-summary.md`
+- `beastside-3d-hero-banner/project-state/checkpoints/20260211-010734-status-snapshot-documentation/restore.md`
+- `risks`:
+- This checkpoint is documentation-only and does not itself validate runtime behavior.
+- Snapshot totals can become stale if docs are not kept in sync on future changes.
+- `validation`:
+- Static verification of repository state and feature totals was captured from current branch head and project-state docs.
+- `next_actions`:
+- Execute the immediate QA focus listed in `CURRENT_STATUS.md`.
+- Promote validated results into `FEATURE_MATRIX.md` statuses as evidence is collected.

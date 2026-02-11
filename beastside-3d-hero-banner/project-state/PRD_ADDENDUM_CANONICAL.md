@@ -236,6 +236,7 @@ This document is the canonical source of approved requirements and acceptance cr
 38. Admin preview must support direct click-selection of ambient, point-light, and model targets via center markers while keeping the edit-mode dropdown as a fallback path.
 39. Selected target gizmo must expose clear RGB axes with axis labels (`X`, `Y`, `Z`) and apply true single-axis movement when dragging each axis handle.
 40. Admin preview grid/axes helpers must exist in 3D scene space and auto-track the model floor baseline so placement cues align with object depth/height context.
+41. Project-state documentation must include a consolidated current status snapshot (branch, commit, version, checkpoints, and progress totals) for onboarding continuity.
 
 ## Non-Negotiable Defaults
 - Debug mode defaults ON.
@@ -322,3 +323,4 @@ This document is the canonical source of approved requirements and acceptance cr
 | 20260210-122522-ambient-gizmo-grid-model-drag-v1 | 2026-02-10T12:25:22Z | Upgraded to scene schema v3 with `ambientPosition`, switched ambient runtime to hemisphere light, added TransformControls-based admin drag for ambient/point/model targets, and added admin-preview grid/axes/selected XYZ label toggles with no public helper rendering. |
 | 20260210-135027-model-visibility-transformcontrols-hotfix | 2026-02-10T13:50:27Z | Fixed model-visibility regression by replacing legacy TransformControls constructor style with class-based inheritance compatible with Three.js r146 and guarding transform-controls init so render/model load continues if gizmo setup fails; bumped version to 0.2.8. |
 | 20260210-145332-direct-pick-axis-gizmo-model3-fix | 2026-02-10T14:53:32Z | Preserved stable `models[].slot` identity across composer/runtime/proxy flows, fixed Model 3 targeting in sparse-slot scenes, added direct marker click target-picking, upgraded gizmo axis constraints with RGB labels, and added auto-floor 3D grid/axes alignment; bumped version to 0.2.9. |
+| 20260211-010734-status-snapshot-documentation | 2026-02-11T01:07:34Z | Added consolidated `CURRENT_STATUS.md` project-state snapshot covering branch/commit/version status, milestone progress, and immediate QA focus, with linked docs-only checkpoint records. |
